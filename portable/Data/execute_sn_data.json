@@ -1,0 +1,82 @@
+{
+  "ExeDataList": [
+    {
+      "DateStr": "2024/3/31 14:56:55",
+      "Type": "D320-CNV1",
+      "PrefixStr": "A05143",
+      "CurretSeqNo": "00013"
+    },
+    {
+      "DateStr": "2024/4/3 10:08:01",
+      "Type": "D320-CNV1",
+      "PrefixStr": "A05144",
+      "CurretSeqNo": "00001"
+    },
+    {
+      "DateStr": "2024/4/19 14:45:15",
+      "Type": "X220-GK-R16",
+      "PrefixStr": "A01144",
+      "CurretSeqNo": "00005"
+    },
+    {
+      "DateStr": "2024/4/29 9:15:37",
+      "Type": "R1200",
+      "PrefixStr": "A76144",
+      "CurretSeqNo": "00002"
+    },
+    {
+      "DateStr": "2024/5/20 16:58:09",
+      "Type": "R1200",
+      "PrefixStr": "A76145",
+      "CurretSeqNo": "00009"
+    },
+    {
+      "DateStr": "2024/5/18 18:03:24",
+      "Type": "X220-GK-R16",
+      "PrefixStr": "A01145",
+      "CurretSeqNo": "00002"
+    },
+    {
+      "DateStr": "2024/5/18 20:02:18",
+      "Type": "X120-LG2W-RED",
+      "PrefixStr": "A02145",
+      "CurretSeqNo": "00001"
+    },
+    {
+      "DateStr": "2024/7/29 17:43:46",
+      "Type": "R1200",
+      "PrefixStr": "A08147",
+      "CurretSeqNo": "00003"
+    },
+    {
+      "DateStr": "2024/7/31 17:34:13",
+      "Type": "X220",
+      "PrefixStr": "A20147",
+      "CurretSeqNo": "00001"
+    },
+    {
+      "DateStr": "2024/7/31 18:08:20",
+      "Type": "R1200C",
+      "PrefixStr": "A09147",
+      "CurretSeqNo": "00004"
+    },
+    {
+      "DateStr": "2024/7/31 18:22:58",
+      "Type": "V100",
+      "PrefixStr": "A25147",
+      "CurretSeqNo": "00002"
+    },
+    {
+      "DateStr": "2024/8/31 17:08:27",
+      "Type": "V100",
+      "PrefixStr": "A25148",
+      "CurretSeqNo": "00011"
+    },
+    {
+      "DateStr": "2024/9/22 13:29:44",
+      "Type": "V100",
+      "PrefixStr": "A25149",
+      "CurretSeqNo": "00011"
+    }
+  ]
+}

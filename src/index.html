@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EzyProduction - 5G Factory SN Tool</title>
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────────────── */
+    :root {
+      --bg-primary: #0f1117;
+      --bg-secondary: #1a1d27;
+      --bg-tertiary: #252830;
+      --border-color: #2d3140;
+      --text-primary: #e4e6eb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --accent: #f97316;
+      --accent-hover: #ea580c;
+      --success: #22c55e;
+      --error: #ef4444;
+      --warning: #eab308;
+      --info: #3b82f6;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      --radius: 6px;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f3f4f6;
+      --bg-tertiary: #e5e7eb;
+      --border-color: #d1d5db;
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --text-muted: #9ca3af;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ─── Reset & Base ──────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── Layout ────────────────────────────────────────────────────────── */
+    .app-container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar ───────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 200px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .nav-item.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--error);
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+    }
+
+    /* ─── Main Content ──────────────────────────────────────────────────── */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .page {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      padding: 16px;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .page.active {
+      display: flex;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    /* ─── Panels ────────────────────────────────────────────────────────── */
+    .panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .panel-body {
+      padding: 12px;
+    }
+
+    /* ─── Form Controls ─────────────────────────────────────────────────── */
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input,
+    .form-select {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: var(--font-sans);
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-input:read-only {
+      background: var(--bg-tertiary);
+      cursor: default;
+    }
+
+    /* ─── Buttons ───────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border-color);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: var(--error);
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── Info Grid ─────────────────────────────────────────────────────── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .info-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    /* ─── SN Display ────────────────────────────────────────────────────── */
+    .sn-display {
+      background: var(--bg-primary);
+      border: 2px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 10px;
+      text-align: center;
+      margin: 8px 0;
+    }
+
+    .sn-text {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    /* ─── Status Indicator ──────────────────────────────────────────────── */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-indicator.success {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+    }
+
+    .status-indicator.error {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+    }
+
+    .status-indicator.warning {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--warning);
+    }
+
+    .status-indicator.info {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--info);
+    }
+
+    /* ─── Table ─────────────────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 6px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .data-table th {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--bg-tertiary);
+    }
+
+    .data-table tr:hover td {
+      background: var(--bg-tertiary);
+    }
+
+    .data-table td {
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    /* ─── Toast ─────────────────────────────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+      animation: slideIn 0.2s ease;
+      max-width: 300px;
+    }
+
+    .toast.success {
+      border-left: 3px solid var(--success);
+    }
+
+    .toast.error {
+      border-left: 3px solid var(--error);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* ─── Loading Overlay ───────────────────────────────────────────────── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ─── Utility ───────────────────────────────────────────────────────── */
+    .mt-8 { margin-top: 4px; }
+    .mt-16 { margin-top: 8px; }
+    .mb-8 { margin-bottom: 4px; }
+    .mb-16 { margin-bottom: 8px; }
+    .text-center { text-align: center; }
+    .text-muted { color: var(--text-muted); }
+    .text-sm { font-size: 12px; }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ─── Theme Toggle ──────────────────────────────────────────────────── */
+    .theme-toggle {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: var(--radius);
+    }
+
+    .theme-toggle:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          EzyProduction
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-page="production">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M8 21h8M12 17v4"/>
+          </svg>
+          生产操作
+        </div>
+        <div class="nav-item" data-page="config">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          设备配置
+        </div>
+        <div class="nav-item" data-page="records">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          生产记录
+        </div>
+        <div class="nav-item" data-page="about">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          关于
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="connection-status">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">未连接</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <button class="theme-toggle" id="themeToggle" title="切换主题">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+
+      <!-- Production Page -->
+      <div class="page active" id="page-production">
+        <h1 class="page-title">生产操作</h1>
+
+        <!-- Product Selection -->
+        <div class="panel">
+          <div class="panel-title">产品选择</div>
+          <div class="panel-body">
+            <div class="info-grid">
+              <div class="form-group">
+                <label class="form-label">品牌</label>
+                <select class="form-select" id="brandSelect"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">产品类型</label>
+                <select class="form-select" id="typeSelect"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">工厂</label>
+                <select class="form-select" id="factorySelect"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SN Display -->
+        <div class="panel">
+          <div class="panel-title">序列号</div>
+          <div class="panel-body">
+            <div class="sn-display">
+              <div class="sn-text" id="snDisplay">------------</div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" id="writeSnBtn">写入 SN</button>
+              <button class="btn btn-secondary" id="getDeviceInfoBtn">获取设备信息</button>
+              <button class="btn btn-secondary" id="activateBtn">激活设备</button>
+            </div>
+            <div class="mt-8" id="writeStatus"></div>
+          </div>
+        </div>
+
+        <!-- Device Info -->
+        <div class="panel">
+          <div class="panel-title">设备信息</div>
+          <div class="panel-body">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">IMEI</span>
+                <span class="info-value" id="imeiValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">ICCID</span>
+                <span class="info-value" id="iccidValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">设备 SN</span>
+                <span class="info-value" id="deviceSnValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">软件版本</span>
+                <span class="info-value" id="swVersionValue">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">设备名称</span>
+                <span class="info-value" id="deviceNameValue">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config Page -->
+      <div class="page" id="page-config">
+        <h1 class="page-title">设备配置</h1>
+
+        <div class="panel">
+          <div class="panel-title">连接设置</div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label">设备 IP 地址</label>
+              <input type="text" class="form-input" id="deviceIpInput" placeholder="192.168.1.100" value="192.168.1.100">
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" id="connectBtn">连接</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">eSIM 查询</div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label">ICCID</label>
+              <input type="text" class="form-input" id="esimIccidInput" readonly>
+            </div>
+            <div class="form-group">
+              <label class="form-label">查询链接</label>
+              <input type="text" class="form-input" id="esimLinkInput" readonly>
+            </div>
+            <button class="btn btn-secondary" id="queryEsimBtn">查询 eSIM ICCID</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Records Page -->
+      <div class="page" id="page-records">
+        <h1 class="page-title">生产记录</h1>
+
+        <div class="panel">
+          <div class="panel-title">设备生产记录</div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>IMEI</th>
+                  <th>ICCID</th>
+                  <th>SN</th>
+                  <th>设备名称</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTableBody">
+                <tr>
+                  <td colspan="5" class="text-center text-muted">暂无记录</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- About Page -->
+      <div class="page" id="page-about">
+        <h1 class="page-title">关于</h1>
+
+        <div class="panel">
+          <div class="panel-title">EzyProduction</div>
+          <div class="panel-body">
+            <p class="mb-8">5G 工厂序列号管理工具</p>
+            <p class="text-sm text-muted">版本: 0.1.0 (Tauri)</p>
+            <p class="text-sm text-muted mt-8">基于 Tauri + TypeScript 构建，支持 Windows / macOS / Linux</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // ─── State ─────────────────────────────────────────────────────────────
+    const state = {
+      connected: false,
+      deviceIp: '192.168.1.100',
+      baseData: null,
+      currentProduct: null,
+      currentSn: '',
+      deviceInfo: null,
+      records: [],
+    };
+
+    // ─── Tauri Invoke Helper ───────────────────────────────────────────────
+    const { invoke } = window.__TAURI__.core;
+
+    async function tauriInvoke(cmd, args = {}) {
+      try {
+        showLoading();
+        const result = await invoke(cmd, args);
+        return result;
+      } catch (error) {
+        showToast(error, 'error');
+        throw error;
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // ─── UI Helpers ────────────────────────────────────────────────────────
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.2s ease';
+        setTimeout(() => toast.remove(), 200);
+      }, 3000);
+    }
+
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.add('active');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    function updateConnectionStatus(connected) {
+      state.connected = connected;
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      
+      if (connected) {
+        dot.classList.add('connected');
+        text.textContent = '已连接';
+      } else {
+        dot.classList.remove('connected');
+        text.textContent = '未连接';
+      }
+    }
+
+    function updateSnDisplay(sn) {
+      state.currentSn = sn;
+      document.getElementById('snDisplay').textContent = sn || '------------';
+    }
+
+    function updateDeviceInfo(info) {
+      state.deviceInfo = info;
+      document.getElementById('imeiValue').textContent = info.imei || '-';
+      document.getElementById('iccidValue').textContent = info.iccid || '-';
+      document.getElementById('deviceSnValue').textContent = info.sn || '-';
+      document.getElementById('swVersionValue').textContent = info.sw_version || '-';
+      document.getElementById('deviceNameValue').textContent = info.device_name || '-';
+    }
+
+    // ─── Navigation ────────────────────────────────────────────────────────
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.classList.contains('disabled')) return;
+        
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        
+        const page = item.dataset.page;
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(`page-${page}`).classList.add('active');
+      });
+    });
+
+    // ─── Theme Toggle ──────────────────────────────────────────────────────
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    });
+
+    // ─── Initialization ────────────────────────────────────────────────────
+    async function initApp() {
+      try {
+        // Initialize app (AppHandle is auto-injected by Tauri)
+        await invoke('init_app');
+        
+        // Load base data
+        let baseData;
+        try {
+          baseData = await invoke('get_base_data');
+        } catch (e) {
+          console.error('get_base_data failed:', e);
+          showToast('加载配置失败: ' + e, 'error');
+          return;
+        }
+        
+        if (!baseData || !baseData.brands) {
+          showToast('配置数据格式错误', 'error');
+          return;
+        }
+        
+        state.baseData = baseData;
+        
+        // Populate selects
+        const brandSelect = document.getElementById('brandSelect');
+        const typeSelect = document.getElementById('typeSelect');
+        const factorySelect = document.getElementById('factorySelect');
+        
+        (baseData.brands || []).forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.name;
+          opt.textContent = b.name;
+          brandSelect.appendChild(opt);
+        });
+        
+        (baseData.types || []).forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.name;
+          opt.textContent = t.name;
+          typeSelect.appendChild(opt);
+        });
+        
+        (baseData.factories || []).forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.name;
+          opt.textContent = f.name;
+          factorySelect.appendChild(opt);
+        });
+        
+        // Load current product
+        let product;
+        try {
+          product = await invoke('get_current_product');
+        } catch (e) {
+          console.error('get_current_product failed:', e);
+          product = { brand: '', product_type: '', fac: '' };
+        }
+        state.currentProduct = product;
+        
+        if (product.Brand) brandSelect.value = product.Brand;
+        if (product.Type) typeSelect.value = product.Type;
+        if (product.Fac) factorySelect.value = product.Fac;
+        
+        // Load current SN
+        let sn;
+        try {
+          sn = await invoke('get_current_sn');
+        } catch (e) {
+          console.error('get_current_sn failed:', e);
+          sn = '------------';
+        }
+        updateSnDisplay(sn);
+        
+        showToast('应用初始化成功', 'success');
+      } catch (error) {
+        console.error('Init failed:', error);
+        showToast('初始化失败: ' + error, 'error');
+      }
+    }
+
+    // ─── Event Handlers ────────────────────────────────────────────────────
+    
+    // Product selection change
+    async function onProductChange() {
+      const brand = document.getElementById('brandSelect').value;
+      const productType = document.getElementById('typeSelect').value;
+      const fac = document.getElementById('factorySelect').value;
+      
+      try {
+        const sn = await tauriInvoke('set_product', {
+          brand,
+          productType,
+          fac,
+        });
+        updateSnDisplay(sn);
+      } catch (error) {
+        console.error('Failed to update product:', error);
+      }
+    }
+
+    document.getElementById('brandSelect').addEventListener('change', onProductChange);
+    document.getElementById('typeSelect').addEventListener('change', onProductChange);
+    document.getElementById('factorySelect').addEventListener('change', onProductChange);
+
+    // Connect
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      const ip = document.getElementById('deviceIpInput').value.trim();
+      if (!ip) {
+        showToast('请输入设备 IP 地址', 'error');
+        return;
+      }
+      
+      state.deviceIp = ip;
+      await tauriInvoke('set_device_ip', { ip });
+      updateConnectionStatus(true);
+      showToast(`已连接到 ${ip}`, 'success');
+    });
+
+    // Write SN
+    document.getElementById('writeSnBtn').addEventListener('click', async () => {
+      if (!state.connected) {
+        showToast('请先连接设备', 'error');
+        return;
+      }
+      
+      if (!state.currentSn) {
+        showToast('序列号为空', 'error');
+        return;
+      }
+      
+      try {
+        const statusEl = document.getElementById('writeStatus');
+        statusEl.innerHTML = '<span class="status-indicator info">写入中...</span>';
+        
+        // Write SN
+        const snOk = await tauriInvoke('write_sn_to_device', { sn: state.currentSn });
+        
+        if (!snOk) {
+          statusEl.innerHTML = '<span class="status-indicator error">SN 写入失败</span>';
+          showToast('SN 写入失败', 'error');
+          return;
+        }
+        
+        // Write product type
+        const productType = document.getElementById('typeSelect').value;
+        const pidOk = await tauriInvoke('write_product_type', { productType });
+        
+        if (!pidOk) {
+          statusEl.innerHTML = '<span class="status-indicator error">型号写入失败</span>';
+          showToast('型号写入失败', 'error');
+          return;
+        }
+        
+        // Get device info
+        const info = await tauriInvoke('get_device_info_from_device');
+        updateDeviceInfo(info);
+        
+        // Save execute data
+        await tauriInvoke('save_execute_data');
+        
+        // Save device record
+        await tauriInvoke('save_device_record', { deviceInfo: info });
+        
+        // Increment sequence
+        const newSn = await tauriInvoke('increment_sequence');
+        updateSnDisplay(newSn);
+        
+        statusEl.innerHTML = '<span class="status-indicator success">写入成功</span>';
+        showToast('SN 写入成功', 'success');
+      } catch (error) {
+        document.getElementById('writeStatus').innerHTML = 
+          '<span class="status-indicator error">写入失败</span>';
+        showToast('写入失败: ' + error, 'error');
+      }
+    });
+
+    // Get device info
+    document.getElementById('getDeviceInfoBtn').addEventListener('click', async () => {
+      if (!state.connected) {
+        showToast('请先连接设备', 'error');
+        return;
+      }
+      
+      try {
+        const info = await tauriInvoke('get_device_info_from_device');
+        updateDeviceInfo(info);
+        showToast('设备信息获取成功', 'success');
+      } catch (error) {
+        showToast('获取失败: ' + error, 'error');
+      }
+    });
+
+    // Activate device
+    document.getElementById('activateBtn').addEventListener('click', async () => {
+      if (!state.connected) {
+        showToast('请先连接设备', 'error');
+        return;
+      }
+      
+      try {
+        const ok = await tauriInvoke('activate_device');
+        if (ok) {
+          showToast('设备激活成功', 'success');
+        } else {
+          showToast('设备激活失败', 'error');
+        }
+      } catch (error) {
+        showToast('激活失败: ' + error, 'error');
+      }
+    });
+
+    // Query eSIM ICCID
+    document.getElementById('queryEsimBtn').addEventListener('click', async () => {
+      if (!state.connected) {
+        showToast('请先连接设备', 'error');
+        return;
+      }
+      
+      try {
+        const iccid = await tauriInvoke('get_esim_iccid');
+        document.getElementById('esimIccidInput').value = iccid;
+        
+        const baseUrl = 'http://iotv3.iot-chuanglin.com/ptdj/directQueryCard?iccid=';
+        document.getElementById('esimLinkInput').value = baseUrl + iccid;
+        
+        showToast('eSIM ICCID 查询成功', 'success');
+      } catch (error) {
+        showToast('查询失败: ' + error, 'error');
+      }
+    });
+
+    // ─── Start ─────────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>

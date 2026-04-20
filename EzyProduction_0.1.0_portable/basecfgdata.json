@@ -1,0 +1,32 @@
+{
+  "brands": [{"name":"AL","index":1,"code":"A"},{"name":"DK","index":2,"code":"D"},{"name":"ODM","index":3,"code":"M"}],
+  "types": [{"name":"D100","index":1,"code":"01"},
+			{"name":"D100-S","index":2,"code":"02"},
+			{"name":"D100-R","index":3,"code":"03"},
+			{"name":"D150","index":4,"code":"04"},
+			{"name":"D150-S","index":5,"code":"05"},
+			{"name":"D150-SQ","index":6,"code":"06"},
+			{"name":"D320","index":7,"code":"07"},
+			{"name":"R1200","index":8,"code":"08"},
+			{"name":"R1200C","index":9,"code":"09"},
+			{"name":"RM500UCNVAA","index":10,"code":"10"},
+			{"name":"X220","index":20,"code":"20"},
+			{"name":"X128","index":21,"code":"21"},
+			{"name":"X128S","index":22,"code":"22"},
+			{"name":"X120R","index":23,"code":"23"},
+			{"name":"X125S","index":24,"code":"24"},
+			{"name":"V100","index":25,"code":"25"},
+			{"name":"V100-S","index":26,"code":"26"},
+			{"name":"V100-R","index":27,"code":"27"},
+			{"name":"UE1010","index":40,"code":"40"},
+			{"name":"V120R","index":41,"code":"41"},
+			{"name":"D601-W","index":70,"code":"70"},
+			{"name":"D605-W","index":71,"code":"71"},
+			{"name":"D601-X","index":72,"code":"72"},
+			{"name":"D601-R","index":73,"code":"73"}
+		   ],
+  "factories": [{"name":"北京5层","index":1,"code":"1"},
+				{"name":"加工厂1","index":2,"code":"2"},
+				{"name":"加工厂2","index":3,"code":"3"}
+			   ]
+}
