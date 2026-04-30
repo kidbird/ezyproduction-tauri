@@ -1,4 +1,4 @@
-# EzyProduction Tauri - Agent Instructions
+# FactoryTool - Agent Instructions
 
 ## Project Overview
 Cross-platform 5G factory SN management tool built with Tauri 2 + TypeScript. Refactored from C# WinForms (.NET Framework 4.7.2).
@@ -45,7 +45,7 @@ bun run build
 - License file: `lic.dat` (in app data dir)
 
 ## Data Storage
-- JSON files in Tauri app data directory (`~/.config/ezyproduction/Data/` or platform equivalent)
+- JSON files in Tauri app data directory (`~/.config/factorytool/Data/` or platform equivalent)
 - Files: `basecfgdata.json`, `selectdata.json`, `execute_sn_data.json`, `production_device_data.json`
 
 ## SN Format

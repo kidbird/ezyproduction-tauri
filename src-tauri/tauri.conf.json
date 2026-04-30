@@ -1,7 +1,7 @@
 {
-  "productName": "EzyProduction",
+  "productName": "FactoryTool",
   "version": "0.1.0",
-  "identifier": "com.arixo.ezyproduction",
+  "identifier": "com.arixo.factorytool",
   "build": {
     "beforeDevCommand": "",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "EzyProduction - 5G Factory SN Tool",
+        "title": "FactoryTool - 5G Factory SN Tool",
         "width": 1000,
         "height": 850,
         "resizable": true,

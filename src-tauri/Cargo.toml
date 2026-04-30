@@ -1,5 +1,5 @@
 [package]
-name = "ezyproduction-tauri"
+name = "factory-tool"
 version = "0.1.0"
 description = "5G Factory Serial Number Management Tool"
 authors = ["Arixo"]

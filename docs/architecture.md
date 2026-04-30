@@ -1,4 +1,4 @@
-# EzyProduction - 架构设计文档
+# FactoryTool - 架构设计文档
 
 > 5G 工厂序列号管理工具 | Tauri 2 + Rust + 原生 HTML/CSS/JS | v0.1.0
 
@@ -126,7 +126,7 @@
 ### 3.1 目录结构
 
 ```
-ezyproduction-tauri/
+factory-tool/
 ├── src/
 │   └── index.html              # 前端 UI (单文件, ~1050 行)
 │                               #   - CSS: ~480 行 (设计系统 + 组件样式)
@@ -135,7 +135,7 @@ ezyproduction-tauri/
 ├── src-tauri/
 │   ├── src/
 │   │   ├── main.rs             # 入口点 (5 行)
-│   │   │   └── ezyproduction_tauri::run()
+│   │   │   └── factory_tool::run()
 │   │   │
 │   │   ├── lib.rs              # 核心模块 (420 行)
 │   │   │   ├── AppState 结构体 (7 个 Mutex 字段)
@@ -224,7 +224,7 @@ ezyproduction-tauri/
 
 ```
 portable/
-├── ezyproduction-tauri.exe     # 主程序
+├── factory-tool.exe     # 主程序
 ├── basecfgdata.json            # 品牌/类型/工厂基础配置 (根目录)
 ├── selectdata.json             # 上次选择的产品 (根目录)
 ├── lic.dat                     # License 文件 (根目录, 可选)

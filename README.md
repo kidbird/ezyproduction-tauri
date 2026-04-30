@@ -1,4 +1,4 @@
-# EzyProduction Tauri
+# FactoryTool
 
 5G 工厂序列号管理工具 — 跨平台桌面应用
 
