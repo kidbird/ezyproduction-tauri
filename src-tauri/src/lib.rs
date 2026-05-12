@@ -220,16 +220,7 @@ async fn write_sn_to_device(sn: String, state: State<'_, AppState>) -> Result<bo
         let guard = state.device_client.lock().unwrap();
         guard.as_ref().ok_or("Device client not initialized")?.clone()
     };
-    client.set_serial_no(&sn).await
-}
-
-#[tauri::command]
-async fn write_product_type(product_type: String, state: State<'_, AppState>) -> Result<bool, String> {
-    let client = {
-        let guard = state.device_client.lock().unwrap();
-        guard.as_ref().ok_or("Device client not initialized")?.clone()
-    };
-    client.set_product_id(&product_type).await
+    client.set_device_sn(&sn).await
 }
 
 #[tauri::command]
@@ -248,14 +239,18 @@ async fn activate_device(state: State<'_, AppState>) -> Result<bool, String> {
         guard.as_ref().ok_or("Device client not initialized")?.clone()
     };
     
-    // Get device info first
-    let device_info = client.get_device_info().await?;
+    // Get device activate info (IMEI)
+    let activate_info = client.get_device_activate_info().await?;
     
-    // Generate JWT
-    let token = generate_device_jwt(&device_info.imei, 1)?;
+    // Generate JWT locally (HS256 + exp)
+    let token = generate_device_jwt(&activate_info.imei, 1)?;
     
-    // Validate license on device
-    client.validate_license(&token).await
+    // Write license to device
+    client.activate_device(&token).await?;
+    
+    // Verify activation status
+    let status = client.get_license_status().await?;
+    Ok(status.valid)
 }
 
 // ─── Data Management ────────────────────────────────────────────────────────
@@ -352,26 +347,6 @@ fn increment_sequence(state: State<'_, AppState>) -> Result<String, String> {
     Ok(generate_sn(&code_set))
 }
 
-// ─── ICCID Query ────────────────────────────────────────────────────────────
-
-#[tauri::command]
-async fn get_esim_iccid(state: State<'_, AppState>) -> Result<String, String> {
-    let client = {
-        let guard = state.device_client.lock().unwrap();
-        guard.as_ref().ok_or("Device client not initialized")?.clone()
-    };
-    
-    // Switch to slot 2 (eSIM)
-    client.set_sim_slot(2).await?;
-    let info = client.get_device_info().await?;
-    let iccid = info.iccid.clone();
-    
-    // Switch back to slot 1
-    client.set_sim_slot(1).await?;
-    
-    Ok(iccid.chars().take(19).collect())
-}
-
 // ─── Tauri App Setup ────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -407,13 +382,11 @@ pub fn run() {
             get_code_set,
             set_device_ip,
             write_sn_to_device,
-            write_product_type,
             get_device_info_from_device,
             activate_device,
             save_execute_data,
             save_device_record,
             increment_sequence,
-            get_esim_iccid,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

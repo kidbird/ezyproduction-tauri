@@ -63,26 +63,27 @@ fn get_current_mac() -> Result<String, String> {
 // Generate device JWT for activation
 pub fn generate_device_jwt(imei: &str, level: i32) -> Result<String, String> {
     use jsonwebtoken::{encode, EncodingKey, Header};
-    use chrono::Utc;
+    use chrono::{Utc, Duration};
     
     #[derive(Serialize)]
     struct DeviceClaims {
         iat: i64,
+        exp: i64,
         imei: String,
         level: i32,
-        iss: String,
     }
     
     let key = "AARRIIXXOO22001177";
+    let now = Utc::now();
     let claims = DeviceClaims {
-        iat: Utc::now().timestamp(),
+        iat: now.timestamp(),
+        exp: (now + Duration::days(365)).timestamp(),
         imei: imei.to_string(),
         level,
-        iss: "www.arixo.cn".to_string(),
     };
     
     encode(
-        &Header::new(Algorithm::HS512),
+        &Header::new(Algorithm::HS256),
         &claims,
         &EncodingKey::from_secret(key.as_bytes()),
     )

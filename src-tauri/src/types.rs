@@ -74,38 +74,47 @@ pub struct DeviceRecords {
     pub record_data: Vec<DeviceInfo>,
 }
 
-// ─── JSON-RPC Response ──────────────────────────────────────────────────────
+// ─── REST API Response ──────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcResponse {
-    pub jsonrpc: String,
-    pub result: serde_json::Value,
-    pub id: String,
+pub struct ApiResponse<T> {
+    pub code: i32,
+    pub message: String,
+    pub data: T,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SnResult {
-    pub serialno: String,
+pub struct DeviceActivateInfo {
+    pub firmware_version: String,
+    pub imei: String,
+    pub iccid: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProductIdResult {
-    #[serde(rename = "productID")]
-    pub product_id: String,
+pub struct DeviceNameData {
+    pub device_name: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SerialNumberData {
+    pub serial_number: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivationStatus {
+    pub valid: bool,
+    pub level: i32,
+    pub activate_time: i64,
+    pub expires_time: i64,
+    pub status: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmptyData {}
 
 // ─── License ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProdSWLic {
     pub token: String,
-}
-
-// ─── App State ──────────────────────────────────────────────────────────────
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppConfig {
-    pub device_ip: String,
-    pub current_product: Product,
-    pub current_code_set: CodeSet,
 }

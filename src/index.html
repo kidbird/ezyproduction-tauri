@@ -668,21 +668,6 @@
             </div>
           </div>
         </div>
-
-        <div class="panel">
-          <div class="panel-title">eSIM 查询</div>
-          <div class="panel-body">
-            <div class="form-group">
-              <label class="form-label">ICCID</label>
-              <input type="text" class="form-input" id="esimIccidInput" readonly>
-            </div>
-            <div class="form-group">
-              <label class="form-label">查询链接</label>
-              <input type="text" class="form-input" id="esimLinkInput" readonly>
-            </div>
-            <button class="btn btn-secondary" id="queryEsimBtn">查询 eSIM ICCID</button>
-          </div>
-        </div>
       </div>
 
       <!-- Records Page -->
@@ -981,16 +966,6 @@
           return;
         }
         
-        // Write product type
-        const productType = document.getElementById('typeSelect').value;
-        const pidOk = await tauriInvoke('write_product_type', { productType });
-        
-        if (!pidOk) {
-          statusEl.innerHTML = '<span class="status-indicator error">型号写入失败</span>';
-          showToast('型号写入失败', 'error');
-          return;
-        }
-        
         // Get device info
         const info = await tauriInvoke('get_device_info_from_device');
         updateDeviceInfo(info);
@@ -1046,26 +1021,6 @@
         }
       } catch (error) {
         showToast('激活失败: ' + error, 'error');
-      }
-    });
-
-    // Query eSIM ICCID
-    document.getElementById('queryEsimBtn').addEventListener('click', async () => {
-      if (!state.connected) {
-        showToast('请先连接设备', 'error');
-        return;
-      }
-      
-      try {
-        const iccid = await tauriInvoke('get_esim_iccid');
-        document.getElementById('esimIccidInput').value = iccid;
-        
-        const baseUrl = 'http://iotv3.iot-chuanglin.com/ptdj/directQueryCard?iccid=';
-        document.getElementById('esimLinkInput').value = baseUrl + iccid;
-        
-        showToast('eSIM ICCID 查询成功', 'success');
-      } catch (error) {
-        showToast('查询失败: ' + error, 'error');
       }
     });
 
