@@ -1,6 +1,6 @@
 [package]
 name = "factory-tool"
-version = "0.1.0"
+version = "0.1.2"
 description = "5G Factory Serial Number Management Tool"
 authors = ["Arixo"]
 edition = "2021"
@@ -22,6 +22,12 @@ thiserror = "1"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[profile.release]
+strip = "symbols"
+lto = true
+codegen-units = 1
+opt-level = "s"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]
