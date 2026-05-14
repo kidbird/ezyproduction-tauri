@@ -64,9 +64,7 @@ pub struct DeviceInfo {
     pub imei: String,
     pub iccid: String,
     pub sn: String,
-    #[serde(rename = "swVersion")]
     pub sw_version: String,
-    #[serde(rename = "deviceName")]
     pub device_name: String,
     pub timestamp: String,
 }
