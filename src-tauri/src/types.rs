@@ -19,11 +19,13 @@ pub struct Item {
     pub code: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BaseData {
+    #[serde(default)]
     pub brands: Vec<Item>,
-    #[serde(rename = "types")]
+    #[serde(rename = "types", default)]
     pub product_types: Vec<Item>,
+    #[serde(default)]
     pub factories: Vec<Item>,
 }
 

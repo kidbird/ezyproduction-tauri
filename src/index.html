@@ -164,7 +164,7 @@
     .page {
       display: none;
       flex: 1;
-      overflow: hidden;
+      overflow-y: auto;
       padding: 16px;
       flex-direction: column;
       gap: 12px;
@@ -301,6 +301,7 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     /* ─── Info Grid ─────────────────────────────────────────────────────── */
@@ -539,6 +540,12 @@
           </svg>
           生产操作
         </div>
+        <div class="nav-item" data-page="product-config">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          产品配置
+        </div>
         <div class="nav-item" data-page="config">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"/>
@@ -647,6 +654,56 @@
                 <span class="info-label">设备名称</span>
                 <span class="info-value" id="deviceNameValue">-</span>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Config Page -->
+      <div class="page" id="page-product-config">
+        <h1 class="page-title">产品配置</h1>
+
+        <div class="panel">
+          <div class="panel-title">品牌管理</div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+              <tbody id="brandsTableBody"></tbody>
+            </table>
+            <div class="btn-group mt-16">
+              <input type="text" class="form-input" id="newBrandName" placeholder="名称" style="width:120px">
+              <input type="text" class="form-input" id="newBrandCode" placeholder="编码" style="width:80px">
+              <button class="btn btn-primary" id="addBrandBtn">添加</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">产品类型管理</div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+              <tbody id="typesTableBody"></tbody>
+            </table>
+            <div class="btn-group mt-16">
+              <input type="text" class="form-input" id="newTypeName" placeholder="名称" style="width:120px">
+              <input type="text" class="form-input" id="newTypeCode" placeholder="编码" style="width:80px">
+              <button class="btn btn-primary" id="addTypeBtn">添加</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">工厂管理</div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+              <tbody id="factoriesTableBody"></tbody>
+            </table>
+            <div class="btn-group mt-16">
+              <input type="text" class="form-input" id="newFactoryName" placeholder="名称" style="width:120px">
+              <input type="text" class="form-input" id="newFactoryCode" placeholder="编码" style="width:80px">
+              <button class="btn btn-primary" id="addFactoryBtn">添加</button>
             </div>
           </div>
         </div>
@@ -826,10 +883,8 @@
     // ─── Initialization ────────────────────────────────────────────────────
     async function initApp() {
       try {
-        // Initialize app (AppHandle is auto-injected by Tauri)
         await invoke('init_app');
         
-        // Load base data
         let baseData;
         try {
           baseData = await invoke('get_base_data');
@@ -845,34 +900,9 @@
         }
         
         state.baseData = baseData;
+        populateSelects(baseData);
+        renderConfigTables(baseData);
         
-        // Populate selects
-        const brandSelect = document.getElementById('brandSelect');
-        const typeSelect = document.getElementById('typeSelect');
-        const factorySelect = document.getElementById('factorySelect');
-        
-        (baseData.brands || []).forEach(b => {
-          const opt = document.createElement('option');
-          opt.value = b.name;
-          opt.textContent = b.name;
-          brandSelect.appendChild(opt);
-        });
-        
-        (baseData.types || []).forEach(t => {
-          const opt = document.createElement('option');
-          opt.value = t.name;
-          opt.textContent = t.name;
-          typeSelect.appendChild(opt);
-        });
-        
-        (baseData.factories || []).forEach(f => {
-          const opt = document.createElement('option');
-          opt.value = f.name;
-          opt.textContent = f.name;
-          factorySelect.appendChild(opt);
-        });
-        
-        // Load current product
         let product;
         try {
           product = await invoke('get_current_product');
@@ -882,16 +912,17 @@
         }
         state.currentProduct = product;
         
-        if (product.Brand) brandSelect.value = product.Brand;
-        if (product.Type) typeSelect.value = product.Type;
-        if (product.Fac) factorySelect.value = product.Fac;
+        const brandSelect = document.getElementById('brandSelect');
+        const typeSelect = document.getElementById('typeSelect');
+        const factorySelect = document.getElementById('factorySelect');
+        if (product.Brand ?? product.brand) brandSelect.value = product.Brand ?? product.brand;
+        if (product.Type ?? product.product_type) typeSelect.value = product.Type ?? product.product_type;
+        if (product.Fac ?? product.fac) factorySelect.value = product.Fac ?? product.fac;
         
-        // Load current SN
         let sn;
         try {
           sn = await invoke('get_current_sn');
         } catch (e) {
-          console.error('get_current_sn failed:', e);
           sn = '------------';
         }
         updateSnDisplay(sn);
@@ -902,6 +933,120 @@
         showToast('初始化失败: ' + error, 'error');
       }
     }
+
+    function populateSelects(baseData) {
+      const brandSelect = document.getElementById('brandSelect');
+      const typeSelect = document.getElementById('typeSelect');
+      const factorySelect = document.getElementById('factorySelect');
+      
+      // Save current selections
+      const curBrand = brandSelect.value;
+      const curType = typeSelect.value;
+      const curFac = factorySelect.value;
+      
+      brandSelect.innerHTML = '';
+      typeSelect.innerHTML = '';
+      factorySelect.innerHTML = '';
+      
+      (baseData.brands || []).forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.name;
+        opt.textContent = b.name;
+        brandSelect.appendChild(opt);
+      });
+      
+      (baseData.types || []).forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.name;
+        opt.textContent = t.name;
+        typeSelect.appendChild(opt);
+      });
+      
+      (baseData.factories || []).forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.name;
+        opt.textContent = f.name;
+        factorySelect.appendChild(opt);
+      });
+      
+      // Restore selections
+      if (curBrand && baseData.brands?.some(b => b.name === curBrand)) brandSelect.value = curBrand;
+      if (curType && baseData.types?.some(t => t.name === curType)) typeSelect.value = curType;
+      if (curFac && baseData.factories?.some(f => f.name === curFac)) factorySelect.value = curFac;
+    }
+
+    // ─── Product Config Tables ─────────────────────────────────────────────
+    function renderConfigTables(baseData) {
+      renderConfigTable('brandsTableBody', baseData.brands || [], 'remove_brand');
+      renderConfigTable('typesTableBody', baseData.types || [], 'remove_product_type');
+      renderConfigTable('factoriesTableBody', baseData.factories || [], 'remove_factory');
+    }
+
+    function renderConfigTable(tbodyId, items, removeCmd) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = '';
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">暂无数据</td></tr>';
+        return;
+      }
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.code}</td>
+          <td><button class="btn btn-danger" style="padding:2px 8px;font-size:11px" data-cmd="${removeCmd}" data-name="${item.name}">删除</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // Bind delete buttons
+      tbody.querySelectorAll('[data-cmd]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const cmd = btn.dataset.cmd;
+          const name = btn.dataset.name;
+          try {
+            showLoading();
+            const newBaseData = await invoke(cmd, { name });
+            state.baseData = newBaseData;
+            populateSelects(newBaseData);
+            renderConfigTables(newBaseData);
+            showToast('删除成功', 'success');
+          } catch (e) {
+            showToast('删除失败: ' + e, 'error');
+          } finally {
+            hideLoading();
+          }
+        });
+      });
+    }
+
+    async function addConfigItem(addCmd, nameId, codeId) {
+      const nameEl = document.getElementById(nameId);
+      const codeEl = document.getElementById(codeId);
+      const name = nameEl.value.trim();
+      const code = codeEl.value.trim();
+      if (!name || !code) {
+        showToast('名称和编码不能为空', 'error');
+        return;
+      }
+      try {
+        showLoading();
+        const newBaseData = await invoke(addCmd, { name, code });
+        state.baseData = newBaseData;
+        populateSelects(newBaseData);
+        renderConfigTables(newBaseData);
+        nameEl.value = '';
+        codeEl.value = '';
+        showToast('添加成功', 'success');
+      } catch (e) {
+        showToast('添加失败: ' + e, 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    document.getElementById('addBrandBtn').addEventListener('click', () => addConfigItem('add_brand', 'newBrandName', 'newBrandCode'));
+    document.getElementById('addTypeBtn').addEventListener('click', () => addConfigItem('add_product_type', 'newTypeName', 'newTypeCode'));
+    document.getElementById('addFactoryBtn').addEventListener('click', () => addConfigItem('add_factory', 'newFactoryName', 'newFactoryCode'));
 
     // ─── Event Handlers ────────────────────────────────────────────────────
     

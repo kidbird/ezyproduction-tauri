@@ -4,7 +4,6 @@
   "identifier": "com.arixo.factorytool",
   "build": {
     "beforeDevCommand": "",
-    "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "",
     "frontendDist": "../src"
   },
