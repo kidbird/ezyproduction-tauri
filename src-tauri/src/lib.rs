@@ -352,6 +352,9 @@ fn increment_sequence(state: State<'_, AppState>) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            let _ = app.get_webview_window("main").map(|w| w.set_focus());
+        }))
         .manage(AppState {
             device_client: Mutex::new(None),
             data_manager: Mutex::new(None),
