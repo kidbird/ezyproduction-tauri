@@ -134,6 +134,7 @@ impl DeviceClient {
         let activate_info = self.get_device_activate_info().await?;
         let device_name = self.get_device_name().await?;
         let sn = self.get_device_sn().await?;
+        let activated = self.get_license_status().await.map(|s| s.valid).unwrap_or(false);
 
         Ok(DeviceInfo {
             imei: activate_info.imei,
@@ -141,6 +142,7 @@ impl DeviceClient {
             sn,
             sw_version: activate_info.firmware_version,
             device_name,
+            activated,
             timestamp: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
         })
     }

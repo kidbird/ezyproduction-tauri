@@ -1,8 +1,9 @@
 use serde::{de::DeserializeOwned, Serialize};
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::PathBuf;
 
-use crate::types::{BaseData, DeviceRecords, ExecutDataList, Product};
+use crate::types::{BaseData, DeviceInfo, ExecutDataList, Product};
 
 pub struct DataManager {
     data_dir: PathBuf,
@@ -42,7 +43,6 @@ impl DataManager {
             Ok(data) => data,
             Err(_) => {
                 let data = Self::embedded_base_data();
-                // Auto-create local file on first run
                 let _ = self.write_json("basecfgdata.json", &data);
                 data
             }
@@ -79,11 +79,46 @@ impl DataManager {
         self.write_json("execute_sn_data.json", data)
     }
 
-    pub fn load_device_records(&self) -> Result<DeviceRecords, String> {
-        self.read_json("production_device_data.json")
+    fn csv_escape(s: &str) -> String {
+        if s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r') {
+            format!("\"{}\"", s.replace('"', "\"\""))
+        } else {
+            s.to_string()
+        }
     }
 
-    pub fn save_device_records(&self, records: &DeviceRecords) -> Result<(), String> {
-        self.write_json("production_device_data.json", records)
+    pub fn append_csv_record(&self, record: &DeviceInfo) -> Result<(), String> {
+        let date = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let filename = format!("{}.csv", date);
+        let path = self.data_dir.join(&filename);
+
+        let need_header = !path.exists() || fs::metadata(&path).map(|m| m.len() == 0).unwrap_or(true);
+
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("Failed to open {}: {}", filename, e))?;
+
+        if need_header {
+            writeln!(file, "日期,IMEI,SN,软件版本,设备名称,激活状态")
+                .map_err(|e| format!("Failed to write header for {}: {}", filename, e))?;
+        }
+
+        let status = if record.activated { "已激活" } else { "未激活" };
+
+        writeln!(
+            file,
+            "{},{},{},{},{},{}",
+            record.timestamp,
+            Self::csv_escape(&record.imei),
+            Self::csv_escape(&record.sn),
+            Self::csv_escape(&record.sw_version),
+            Self::csv_escape(&record.device_name),
+            status,
+        )
+        .map_err(|e| format!("Failed to write record to {}: {}", filename, e))?;
+
+        Ok(())
     }
 }

@@ -411,6 +411,45 @@
       font-size: 12px;
     }
 
+    /* ─── Tabs ──────────────────────────────────────────────────────────── */
+    .config-tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .config-tab {
+      padding: 8px 20px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+      margin-bottom: -1px;
+    }
+
+    .config-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .config-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .config-tab-panel {
+      display: none;
+    }
+
+    .config-tab-panel.active {
+      display: block;
+    }
+
     /* ─── Toast ─────────────────────────────────────────────────────────── */
     .toast-container {
       position: fixed;
@@ -658,6 +697,10 @@
                 <span class="info-label">设备名称</span>
                 <span class="info-value" id="deviceNameValue">-</span>
               </div>
+              <div class="info-item">
+                <span class="info-label">激活状态</span>
+                <span class="info-value" id="activateStatusValue">-</span>
+              </div>
             </div>
           </div>
         </div>
@@ -667,47 +710,56 @@
       <div class="page" id="page-product-config">
         <h1 class="page-title">产品配置</h1>
 
-        <div class="panel">
-          <div class="panel-title">品牌管理</div>
-          <div class="panel-body">
-            <table class="data-table">
-              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
-              <tbody id="brandsTableBody"></tbody>
-            </table>
-            <div class="btn-group mt-16">
-              <input type="text" class="form-input" id="newBrandName" placeholder="名称" style="width:120px">
-              <input type="text" class="form-input" id="newBrandCode" placeholder="编码" style="width:80px">
-              <button class="btn btn-primary" id="addBrandBtn">添加</button>
+        <div class="config-tabs">
+          <button class="config-tab active" data-tab="brands">品牌设置</button>
+          <button class="config-tab" data-tab="types">产品类型</button>
+          <button class="config-tab" data-tab="factories">工厂设置</button>
+        </div>
+
+        <div class="config-tab-panel active" id="panel-brands">
+          <div class="panel">
+            <div class="panel-body">
+              <table class="data-table">
+                <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+                <tbody id="brandsTableBody"></tbody>
+              </table>
+              <div class="btn-group mt-16">
+                <input type="text" class="form-input" id="newBrandName" placeholder="名称" style="width:120px">
+                <input type="text" class="form-input" id="newBrandCode" placeholder="编码" style="width:80px">
+                <button class="btn btn-primary" id="addBrandBtn">添加</button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">产品类型管理</div>
-          <div class="panel-body">
-            <table class="data-table">
-              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
-              <tbody id="typesTableBody"></tbody>
-            </table>
-            <div class="btn-group mt-16">
-              <input type="text" class="form-input" id="newTypeName" placeholder="名称" style="width:120px">
-              <input type="text" class="form-input" id="newTypeCode" placeholder="编码" style="width:80px">
-              <button class="btn btn-primary" id="addTypeBtn">添加</button>
+        <div class="config-tab-panel" id="panel-types">
+          <div class="panel">
+            <div class="panel-body">
+              <table class="data-table">
+                <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+                <tbody id="typesTableBody"></tbody>
+              </table>
+              <div class="btn-group mt-16">
+                <input type="text" class="form-input" id="newTypeName" placeholder="名称" style="width:120px">
+                <input type="text" class="form-input" id="newTypeCode" placeholder="编码" style="width:80px">
+                <button class="btn btn-primary" id="addTypeBtn">添加</button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-title">工厂管理</div>
-          <div class="panel-body">
-            <table class="data-table">
-              <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
-              <tbody id="factoriesTableBody"></tbody>
-            </table>
-            <div class="btn-group mt-16">
-              <input type="text" class="form-input" id="newFactoryName" placeholder="名称" style="width:120px">
-              <input type="text" class="form-input" id="newFactoryCode" placeholder="编码" style="width:80px">
-              <button class="btn btn-primary" id="addFactoryBtn">添加</button>
+        <div class="config-tab-panel" id="panel-factories">
+          <div class="panel">
+            <div class="panel-body">
+              <table class="data-table">
+                <thead><tr><th>名称</th><th>编码</th><th>操作</th></tr></thead>
+                <tbody id="factoriesTableBody"></tbody>
+              </table>
+              <div class="btn-group mt-16">
+                <input type="text" class="form-input" id="newFactoryName" placeholder="名称" style="width:120px">
+                <input type="text" class="form-input" id="newFactoryCode" placeholder="编码" style="width:80px">
+                <button class="btn btn-primary" id="addFactoryBtn">添加</button>
+              </div>
             </div>
           </div>
         </div>
@@ -862,6 +914,7 @@
       document.getElementById('deviceSnValue').textContent = info.sn || '-';
       document.getElementById('swVersionValue').textContent = info.sw_version || '-';
       document.getElementById('deviceNameValue').textContent = info.device_name || '-';
+      document.getElementById('activateStatusValue').textContent = info.activated ? '已激活' : '未激活';
     }
 
     // ─── Navigation ────────────────────────────────────────────────────────
@@ -1000,7 +1053,7 @@
         tr.innerHTML = `
           <td>${item.name}</td>
           <td>${item.code}</td>
-          <td><button class="btn btn-danger" style="padding:2px 8px;font-size:11px" data-cmd="${removeCmd}" data-name="${item.name}">删除</button></td>
+          <td><button class="btn btn-primary" data-cmd="${removeCmd}" data-name="${item.name}">删除</button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1053,6 +1106,16 @@
     document.getElementById('addBrandBtn').addEventListener('click', () => addConfigItem('add_brand', 'newBrandName', 'newBrandCode'));
     document.getElementById('addTypeBtn').addEventListener('click', () => addConfigItem('add_product_type', 'newTypeName', 'newTypeCode'));
     document.getElementById('addFactoryBtn').addEventListener('click', () => addConfigItem('add_factory', 'newFactoryName', 'newFactoryCode'));
+
+    // Tab switching
+    document.querySelectorAll('.config-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.config-tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
 
     // ─── Event Handlers ────────────────────────────────────────────────────
     

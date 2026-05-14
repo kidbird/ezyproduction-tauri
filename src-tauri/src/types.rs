@@ -67,12 +67,10 @@ pub struct DeviceInfo {
     pub sw_version: String,
     pub device_name: String,
     pub timestamp: String,
+    pub activated: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceRecords {
-    pub record_data: Vec<DeviceInfo>,
-}
+// CSV record exported for device production trace
 
 // ─── REST API Response ──────────────────────────────────────────────────────
 

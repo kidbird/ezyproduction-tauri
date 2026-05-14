@@ -81,8 +81,8 @@ Two separate JWT systems with different keys and algorithms:
 ## Data Storage
 Portable mode — all data relative to the executable directory:
 - **Config files** (exe directory): `basecfgdata.json`, `selectdata.json`, `lic.dat`
-- **Runtime data** (`Data/` subdirectory): `execute_sn_data.json`, `production_device_data.json`
-- Device records are deduplicated by IMEI
+- **Runtime data** (`Data/` subdirectory): `execute_sn_data.json`, `YYYY-MM-DD.csv` (device records, append-only)
+- Device records are appended as CSV rows (date-named file, one file per day)
 
 ## SN Format
 `Brand(1-2) + Type(2) + Factory(1) + Year(1) + Month(1 hex) + Sequence(5)` = ~12 chars
@@ -97,7 +97,7 @@ All fields use `Mutex` for thread safety:
 - `data_manager: Mutex<Option<DataManager>>`
 - `current_product: Mutex<Product>`
 - `current_code_set: Mutex<CodeSet>`
-- `device_records: Mutex<Option<DeviceRecords>>`
+- `execute_data: Mutex<Option<ExecutDataList>>`
 - `execute_data: Mutex<Option<ExecutDataList>>`
 - `base_data: Mutex<Option<BaseData>>`
 

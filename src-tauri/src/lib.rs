@@ -18,7 +18,6 @@ pub struct AppState {
     pub data_manager: Mutex<Option<DataManager>>,
     pub current_product: Mutex<Product>,
     pub current_code_set: Mutex<CodeSet>,
-    pub device_records: Mutex<Option<DeviceRecords>>,
     pub execute_data: Mutex<Option<ExecutDataList>>,
     pub base_data: Mutex<BaseData>,
 }
@@ -71,7 +70,6 @@ fn init_app(app_handle: tauri::AppHandle) -> Result<bool, String> {
     let base_data = data_manager.load_base_data();
     let product = data_manager.load_product_selection(&base_data);
     let execute_data = data_manager.load_execute_data().ok();
-    let device_records = data_manager.load_device_records().ok();
 
     let mut code_set = CodeSet {
         brand_code: String::new(),
@@ -106,7 +104,6 @@ fn init_app(app_handle: tauri::AppHandle) -> Result<bool, String> {
     *state.data_manager.lock().unwrap() = Some(data_manager);
     *state.current_product.lock().unwrap() = product;
     *state.current_code_set.lock().unwrap() = code_set;
-    *state.device_records.lock().unwrap() = device_records;
     *state.execute_data.lock().unwrap() = execute_data;
     *state.base_data.lock().unwrap() = base_data;
 
@@ -307,37 +304,9 @@ fn save_execute_data(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 fn save_device_record(device_info: DeviceInfo, state: State<'_, AppState>) -> Result<(), String> {
-    let mut records = state.device_records.lock().unwrap();
-
-    if records.is_none() {
-        *records = Some(DeviceRecords { record_data: Vec::new() });
-    }
-
-    if let Some(ref mut recs) = *records {
-        let mut found = false;
-        for rec in &mut recs.record_data {
-            if rec.imei == device_info.imei {
-                rec.iccid = device_info.iccid.clone();
-                rec.sn = device_info.sn.clone();
-                rec.sw_version = device_info.sw_version.clone();
-                rec.device_name = device_info.device_name.clone();
-                rec.timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-                found = true;
-                break;
-            }
-        }
-        if !found {
-            let mut new_rec = device_info.clone();
-            new_rec.timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-            recs.record_data.push(new_rec);
-        }
-    }
-
-    if let Some(ref dm) = *state.data_manager.lock().unwrap() {
-        dm.save_device_records(records.as_ref().unwrap())?;
-    }
-
-    Ok(())
+    let dm = state.data_manager.lock().unwrap();
+    let dm = dm.as_ref().ok_or("Data manager not initialized")?;
+    dm.append_csv_record(&device_info)
 }
 
 #[tauri::command]
@@ -371,7 +340,6 @@ pub fn run() {
                 mon_code: String::new(),
                 seq_code: "00001".to_string(),
             }),
-            device_records: Mutex::new(None),
             execute_data: Mutex::new(None),
             base_data: Mutex::new(BaseData::default()),
         })
