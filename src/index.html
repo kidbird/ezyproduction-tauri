@@ -590,7 +590,7 @@
           <div class="panel-body">
             <div class="form-group" style="display:flex; align-items:center; gap:12px; margin-bottom:0;">
               <label class="form-label" style="margin:0; white-space:nowrap;">设备 IP</label>
-              <input type="text" class="form-input" id="deviceIpInput" placeholder="192.168.100.1" value="192.168.100.1" style="flex:1; max-width:220px;">
+              <input type="text" class="form-input" id="deviceIpInput" placeholder="192.168.42.1" value="192.168.42.1" style="flex:1; max-width:220px;">
               <button class="btn btn-primary" id="connectBtn">连接</button>
             </div>
           </div>
@@ -768,7 +768,7 @@
     // ─── State ─────────────────────────────────────────────────────────────
     const state = {
       connected: false,
-      deviceIp: '192.168.100.1',
+      deviceIp: '192.168.42.1',
       baseData: null,
       currentProduct: null,
       currentSn: '',
@@ -1059,7 +1059,7 @@
     document.getElementById('factorySelect').addEventListener('change', onProductChange);
 
     // Connect
-    document.getElementById('connectBtn').addEventListener('click', async () => {
+    async function doConnect() {
       const ip = document.getElementById('deviceIpInput').value.trim();
       if (!ip) {
         showToast('请输入设备 IP 地址', 'error');
@@ -1070,6 +1070,16 @@
       await tauriInvoke('set_device_ip', { ip });
       updateConnectionStatus(true);
       showToast(`已连接到 ${ip}`, 'success');
+
+      try {
+        const info = await tauriInvoke('get_device_info_from_device');
+        updateDeviceInfo(info);
+      } catch (_) {}
+    }
+
+    document.getElementById('connectBtn').addEventListener('click', doConnect);
+    document.getElementById('deviceIpInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doConnect();
     });
 
     // Write SN
