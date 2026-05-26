@@ -44,15 +44,17 @@ pub struct CodeSet {
 // ─── Execution Data ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct ExecuteData {
     pub date_str: String,
-    #[serde(rename = "type")]
+    #[serde(rename = "Type")]
     pub product_type: String,
     pub prefix_str: String,
     pub curret_seq_no: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct ExecutDataList {
     pub exe_data_list: Vec<ExecuteData>,
 }
