@@ -7,7 +7,7 @@ $dloader = "D:\code\r26-dloader"
 $dest = Join-Path $PSScriptRoot "..\src-tauri\binaries\r26-cli-x86_64-pc-windows-msvc.exe"
 
 Push-Location $dloader
-cargo build --release -p r26-cli
+cargo build --release -p r26-cli --target i686-pc-windows-msvc
 Pop-Location
 
 $src = Join-Path $dloader "target\i686-pc-windows-msvc\release\r26-cli.exe"

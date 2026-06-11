@@ -327,6 +327,24 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|window, event| {
+            // If the window closes mid-flash, kill the sidecar so it never
+            // keeps controlling the device after the UI is gone.
+            if matches!(
+                event,
+                tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed
+            ) {
+                if let Some(child) = window
+                    .state::<dloader::DloaderState>()
+                    .child
+                    .lock()
+                    .unwrap()
+                    .take()
+                {
+                    let _ = child.kill();
+                }
+            }
+        })
         .manage(dloader::DloaderState::default())
         .manage(AppState {
             device_client: Mutex::new(None),

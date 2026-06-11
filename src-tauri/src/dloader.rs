@@ -135,13 +135,6 @@ pub async fn start_firmware_download(
     app: AppHandle,
     path: String,
 ) -> Result<(), String> {
-    // One download at a time. The webview disables the button during a run,
-    // but the IPC endpoint must reject re-entry itself, or a second call would
-    // orphan the first sidecar (its process keeps running with no Terminated).
-    if app.state::<DloaderState>().child.lock().unwrap().is_some() {
-        return Err("下载正在进行中".to_string());
-    }
-
     // 1. Analyze + policy gate (RF / PhaseCheck PACs never reach the sidecar).
     let report = run_pac_info(&app, &path).await?;
     let plan = plan_flash(&report);
@@ -157,19 +150,27 @@ pub async fn start_firmware_download(
         args.push((*f).to_string());
     }
 
-    // 3. Spawn the sidecar (Rust-side => no webview permission needed; the
-    //    shell plugin runs it without a console window on Windows).
-    let (mut rx, child) = app
-        .shell()
-        .sidecar("r26-cli")
-        .map_err(|e| format!("无法定位刷机组件: {e}"))?
-        .args(args)
-        .spawn()
-        .map_err(|e| format!("启动刷机失败: {e}"))?;
-
+    // 3. Spawn the sidecar and register the child atomically: hold the state
+    //    lock across the re-entry check, the spawn, and the store so two
+    //    concurrent invocations can't both start a download. spawn() is
+    //    synchronous, so no .await happens while the std Mutex is held.
     let state = app.state::<DloaderState>();
-    *state.child.lock().unwrap() = Some(child);
     let child_slot = state.child.clone();
+    let mut rx = {
+        let mut guard = state.child.lock().unwrap();
+        if guard.is_some() {
+            return Err("下载正在进行中".to_string());
+        }
+        let (rx, child) = app
+            .shell()
+            .sidecar("r26-cli")
+            .map_err(|e| format!("无法定位刷机组件: {e}"))?
+            .args(args)
+            .spawn()
+            .map_err(|e| format!("启动刷机失败: {e}"))?;
+        *guard = Some(child);
+        rx
+    };
 
     // 4. Forward stdout JSON lines verbatim as `firmware-event`.
     let app_for_task = app.clone();

@@ -1043,6 +1043,7 @@
       Safe: ['安全','ok'], NvWrite: ['NV','warn'], RfCalibration: ['RF校准','err'],
       Erase: ['擦除','err'], EraseAll: ['全盘擦除','err'], PhaseCheck: ['PhaseCheck','info'],
     };
+    const fwEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
     function fwLog(line) {
       const el = document.getElementById('fwLog');
@@ -1074,7 +1075,7 @@
         .forEach(f => rows.push({ id: f.file_id, risk: f.risk_level, reason: f.reason }));
       const body = rows.map(r => {
         const [label, cls] = RISK_LABEL[r.risk] || [r.risk, 'info'];
-        return `<tr><td class="id">${r.id}</td><td><span class="chip ${cls}" title="${r.reason}">${label}</span></td></tr>`;
+        return `<tr><td class="id">${fwEsc(r.id)}</td><td><span class="chip ${cls}" title="${fwEsc(r.reason)}">${label}</span></td></tr>`;
       }).join('');
       document.getElementById('fwRiskWrap').innerHTML =
         `<details><summary style="cursor:pointer; font-size:12.5px; color:var(--text-secondary);">文件列表 (${report.total_files})</summary>` +
@@ -1110,9 +1111,17 @@
 
     // Select + analyze a PAC.
     document.getElementById('fwSelectPacBtn').addEventListener('click', async () => {
+      const selBtn = document.getElementById('fwSelectPacBtn');
+      let path;
       try {
-        const path = await invoke('pick_pac_file');
-        if (!path) return;
+        path = await invoke('pick_pac_file');
+      } catch (e) {
+        document.getElementById('fwPacAlert').innerHTML = `<div class="alert alert-error">分析失败: ${fwEsc(e)}</div>`;
+        return;
+      }
+      if (!path) return;
+      selBtn.disabled = true;
+      try {
         fw.pacPath = path;
         fw.report = null;
         document.getElementById('fwPacPath').textContent = path;
@@ -1123,7 +1132,9 @@
         fw.report = report;
         fwRenderReport(report);
       } catch (e) {
-        document.getElementById('fwPacAlert').innerHTML = `<div class="alert alert-error">分析失败: ${e}</div>`;
+        document.getElementById('fwPacAlert').innerHTML = `<div class="alert alert-error">分析失败: ${fwEsc(e)}</div>`;
+      } finally {
+        selBtn.disabled = fw.downloading;
       }
     });
 
@@ -1174,11 +1185,11 @@
         fwSetProgress(null);
         fwSetResult(r.success
           ? `<div class="alert alert-success">✅ 下载完成！耗时 ${Math.round((r.duration_ms||0)/1000)} 秒</div>`
-          : `<div class="alert alert-error">❌ 下载失败: ${r.error || '未知错误'}</div>`);
+          : `<div class="alert alert-error">❌ 下载失败: ${fwEsc(r.error || '未知错误')}</div>`);
       } else if (p.Error) {
         fwSetDownloading(false);
         fwSetProgress(null);
-        fwSetResult(`<div class="alert alert-error">❌ 错误 [${p.Error.code}]: ${p.Error.message}</div>`);
+        fwSetResult(`<div class="alert alert-error">❌ 错误 [${p.Error.code}]: ${fwEsc(p.Error.message)}</div>`);
       } else if (p.Terminated) {
         // Process exited without a Completed event (e.g. killed or crashed).
         if (fw.downloading) {
