@@ -4,9 +4,11 @@
 //! self-contained 32-bit `r26-cli.exe` sidecar, decoding its line-delimited
 //! JSON into Tauri `firmware-event`s for the UI.
 
+use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_dialog::DialogExt;
 
 // ── DTOs mirroring r26-core's serialized safety types ───────────────────────
@@ -120,9 +122,6 @@ pub async fn pac_info(app: AppHandle, path: String) -> Result<SafetyReportDto, S
     run_pac_info(&app, &path).await
 }
 
-use std::sync::{Arc, Mutex};
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
-
 /// Holds the currently-running download sidecar so `stop` can kill it.
 #[derive(Default)]
 pub struct DloaderState {
@@ -136,6 +135,13 @@ pub async fn start_firmware_download(
     app: AppHandle,
     path: String,
 ) -> Result<(), String> {
+    // One download at a time. The webview disables the button during a run,
+    // but the IPC endpoint must reject re-entry itself, or a second call would
+    // orphan the first sidecar (its process keeps running with no Terminated).
+    if app.state::<DloaderState>().child.lock().unwrap().is_some() {
+        return Err("下载正在进行中".to_string());
+    }
+
     // 1. Analyze + policy gate (RF / PhaseCheck PACs never reach the sidecar).
     let report = run_pac_info(&app, &path).await?;
     let plan = plan_flash(&report);
