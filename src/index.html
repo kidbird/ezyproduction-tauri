@@ -622,6 +622,14 @@
           </svg>
           生产记录
         </div>
+        <div class="nav-item" data-page="firmware">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          固件下载
+        </div>
         <div class="nav-item" data-page="about">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
@@ -816,6 +824,61 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firmware Download Page -->
+      <div class="page" id="page-firmware">
+        <h1 class="page-title">固件下载</h1>
+
+        <!-- PAC selection + analysis -->
+        <div class="panel">
+          <div class="panel-body">
+            <div class="panel-header"><div class="panel-title">PAC 固件包</div></div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <button class="btn btn-primary" id="fwSelectPacBtn">选择 PAC</button>
+              <span id="fwPacPath" style="font-size:12px; color:var(--text-muted); word-break:break-all;">未加载 — 选择一个 PAC 文件后即可开始下载</span>
+            </div>
+            <div id="fwPacAlert" style="margin-top:12px;"></div>
+            <div id="fwRiskWrap" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Safety status -->
+        <div class="panel">
+          <div class="panel-body">
+            <div class="panel-header"><div class="panel-title">安全策略状态</div></div>
+            <div id="fwSafetyChips" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <span class="chip ok">射频校准: 已保护</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Download controls -->
+        <div class="panel">
+          <div class="panel-body">
+            <div class="panel-header"><div class="panel-title">下载控制</div></div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-primary" id="fwStartBtn" disabled>开始下载</button>
+              <button class="btn btn-danger" id="fwStopBtn" disabled>停止</button>
+            </div>
+            <div id="fwProgressWrap" style="margin-top:14px; display:none;">
+              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+                <span id="fwProgressLabel" style="font-weight:600;"></span>
+                <span id="fwProgressPct"></span>
+              </div>
+              <div class="progress-bar"><div class="progress-bar-fill" id="fwProgressFill" style="width:0%;"></div></div>
+            </div>
+            <div id="fwResult" style="margin-top:12px;"></div>
+          </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="panel">
+          <div class="panel-body">
+            <div class="panel-header"><div class="panel-title">系统运行日志</div></div>
+            <div class="log-console" id="fwLog"><span style="color:var(--text-muted); font-style:italic;">暂无日志。加载 PAC 后点击"开始下载"。</span></div>
           </div>
         </div>
       </div>
