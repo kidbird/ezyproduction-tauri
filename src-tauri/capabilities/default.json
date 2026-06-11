@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "FactoryTool default capability (core APIs incl. event listen).",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
