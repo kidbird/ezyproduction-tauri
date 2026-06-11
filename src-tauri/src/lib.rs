@@ -3,6 +3,7 @@ use tauri::{Manager, State};
 
 mod api_client;
 mod data;
+mod dloader;
 mod license;
 mod sn_generator;
 mod types;
