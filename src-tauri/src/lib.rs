@@ -327,6 +327,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .manage(dloader::DloaderState::default())
         .manage(AppState {
             device_client: Mutex::new(None),
             data_manager: Mutex::new(None),
@@ -367,6 +368,10 @@ pub fn run() {
             remove_product_type,
             add_factory,
             remove_factory,
+            dloader::pick_pac_file,
+            dloader::pac_info,
+            dloader::start_firmware_download,
+            dloader::stop_firmware_download,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

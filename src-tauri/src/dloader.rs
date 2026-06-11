@@ -120,6 +120,115 @@ pub async fn pac_info(app: AppHandle, path: String) -> Result<SafetyReportDto, S
     run_pac_info(&app, &path).await
 }
 
+use std::sync::{Arc, Mutex};
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+
+/// Holds the currently-running download sidecar so `stop` can kill it.
+#[derive(Default)]
+pub struct DloaderState {
+    pub child: Arc<Mutex<Option<CommandChild>>>,
+}
+
+/// Analyze the PAC, enforce the factory-safe policy, then spawn the sidecar
+/// download and forward its JSON events to the frontend as `firmware-event`.
+#[tauri::command]
+pub async fn start_firmware_download(
+    app: AppHandle,
+    path: String,
+) -> Result<(), String> {
+    // 1. Analyze + policy gate (RF / PhaseCheck PACs never reach the sidecar).
+    let report = run_pac_info(&app, &path).await?;
+    let plan = plan_flash(&report);
+    if let Some(reason) = plan.blocked_reason {
+        return Err(reason);
+    }
+
+    // 2. Build args: download <path> --port 0 --json [--allow-*]
+    let mut args: Vec<String> = vec![
+        "download".into(), path, "--port".into(), "0".into(), "--json".into(),
+    ];
+    for f in &plan.allow_flags {
+        args.push((*f).to_string());
+    }
+
+    // 3. Spawn the sidecar (Rust-side => no webview permission needed; the
+    //    shell plugin runs it without a console window on Windows).
+    let (mut rx, child) = app
+        .shell()
+        .sidecar("r26-cli")
+        .map_err(|e| format!("无法定位刷机组件: {e}"))?
+        .args(args)
+        .spawn()
+        .map_err(|e| format!("启动刷机失败: {e}"))?;
+
+    let state = app.state::<DloaderState>();
+    *state.child.lock().unwrap() = Some(child);
+    let child_slot = state.child.clone();
+
+    // 4. Forward stdout JSON lines verbatim as `firmware-event`.
+    let app_for_task = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(bytes) => {
+                    let text = String::from_utf8_lossy(&bytes);
+                    let trimmed = text.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    match serde_json::from_str::<serde_json::Value>(trimmed) {
+                        Ok(v) => {
+                            let _ = app_for_task.emit("firmware-event", v);
+                        }
+                        Err(_) => {
+                            let _ = app_for_task.emit(
+                                "firmware-event",
+                                serde_json::json!({ "Log": { "level": "info", "message": trimmed } }),
+                            );
+                        }
+                    }
+                }
+                CommandEvent::Stderr(bytes) => {
+                    let text = String::from_utf8_lossy(&bytes);
+                    let trimmed = text.trim();
+                    if !trimmed.is_empty() {
+                        let _ = app_for_task.emit(
+                            "firmware-event",
+                            serde_json::json!({ "Log": { "level": "stderr", "message": trimmed } }),
+                        );
+                    }
+                }
+                CommandEvent::Error(err) => {
+                    let _ = app_for_task.emit(
+                        "firmware-event",
+                        serde_json::json!({ "Error": { "code": 0, "message": err } }),
+                    );
+                }
+                CommandEvent::Terminated(payload) => {
+                    *child_slot.lock().unwrap() = None;
+                    let _ = app_for_task.emit(
+                        "firmware-event",
+                        serde_json::json!({ "Terminated": { "code": payload.code } }),
+                    );
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Kill the running download sidecar, if any.
+#[tauri::command]
+pub fn stop_firmware_download(state: State<'_, DloaderState>) -> Result<(), String> {
+    if let Some(child) = state.child.lock().unwrap().take() {
+        child.kill().map_err(|e| format!("停止失败: {e}"))?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
