@@ -5,6 +5,9 @@
 //! JSON into Tauri `firmware-event`s for the UI.
 
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_shell::ShellExt;
+use tauri_plugin_dialog::DialogExt;
 
 // ── DTOs mirroring r26-core's serialized safety types ───────────────────────
 
@@ -66,6 +69,55 @@ pub fn plan_flash(report: &SafetyReportDto) -> FlashPlan {
         allow_flags.push("--allow-nv-write");
     }
     FlashPlan { blocked_reason: None, allow_flags }
+}
+
+/// Run `r26-cli pac-info <path> --json` and parse the single JSON report line.
+async fn run_pac_info(app: &AppHandle, path: &str) -> Result<SafetyReportDto, String> {
+    let output = app
+        .shell()
+        .sidecar("r26-cli")
+        .map_err(|e| format!("无法定位刷机组件: {e}"))?
+        .args(["pac-info", path, "--json"])
+        .output()
+        .await
+        .map_err(|e| format!("启动刷机组件失败: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "PAC 分析失败: {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let line = stdout
+        .lines()
+        .rev()
+        .find(|l| l.trim_start().starts_with('{'))
+        .ok_or("刷机组件未返回安全报告")?;
+    serde_json::from_str::<SafetyReportDto>(line.trim())
+        .map_err(|e| format!("解析安全报告失败: {e}"))
+}
+
+/// Open a native file picker for a `.pac` file. Returns the chosen path, or
+/// None if the user cancelled. Driven from Rust so the frontend needs no
+/// dialog-plugin JS.
+#[tauri::command]
+pub async fn pick_pac_file(app: AppHandle) -> Result<Option<String>, String> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .add_filter("PAC 固件包", &["pac"])
+        .pick_file(move |f| {
+            let _ = tx.send(f);
+        });
+    let picked = rx.await.map_err(|e| e.to_string())?;
+    Ok(picked.map(|p| p.to_string()))
+}
+
+/// Analyze a PAC file and return its safety report to the frontend.
+#[tauri::command]
+pub async fn pac_info(app: AppHandle, path: String) -> Result<SafetyReportDto, String> {
+    run_pac_info(&app, &path).await
 }
 
 #[cfg(test)]
