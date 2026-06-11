@@ -578,6 +578,13 @@
     .risk-table th, .risk-table td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border-color); }
     .risk-table th { font-size:11px; font-weight:600; letter-spacing:.06em; color:var(--text-muted); text-transform:uppercase; }
     .risk-table td.id { font-family:var(--font-mono); font-size:12px; }
+    /* Scope r26's panel-title + outline danger button to the firmware page only,
+       overriding FactoryTool's global bar-style title / filled danger button. */
+    #page-firmware .panel-title { padding:0; border:none; background:none; border-radius:0;
+                                  font-size:11px; font-weight:600; letter-spacing:.06em;
+                                  color:var(--text-muted); text-transform:uppercase; }
+    #page-firmware .btn-danger { background:transparent; border:1px solid var(--error); color:var(--error); }
+    #page-firmware .btn-danger:hover:not(:disabled) { background:var(--error); color:#fff; }
   </style>
 </head>
 <body>
