@@ -44,7 +44,9 @@ bun run build
 
 ```
 ├── src/
-│   └── index.html          # 前端 UI (单文件)
+│   ├── index.html          # 前端 UI (标记 + JS)
+│   ├── styles.css          # 主题样式 (与 modem-cat 风格一致)
+│   └── fonts/              # Inter / JetBrains Mono 本地字体
 ├── src-tauri/
 │   ├── src/
 │   │   ├── lib.rs          # Tauri 命令入口

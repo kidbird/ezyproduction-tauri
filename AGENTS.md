@@ -4,7 +4,7 @@
 Cross-platform 5G factory SN management tool built with Tauri 2 + Rust. Refactored from C# WinForms (.NET Framework 4.7.2).
 
 ## Architecture
-- **Frontend**: Single-file vanilla HTML/CSS/JS in `src/index.html` (no framework)
+- **Frontend**: Vanilla HTML/CSS/JS, no framework — `src/index.html` (markup + JS) + `src/styles.css` (theme, mirrors modem-cat's design language) + `src/fonts/` (Inter, JetBrains Mono)
 - **Backend**: Rust in `src-tauri/src/`
 - **Communication**: Tauri `invoke()` bridge
 - **State**: `AppState` struct with `Mutex`-wrapped fields, managed by Tauri's state system
@@ -20,7 +20,8 @@ Cross-platform 5G factory SN management tool built with Tauri 2 + Rust. Refactor
 | Types | Shared serde structs | `types.rs` |
 
 ## Key Files
-- `src/index.html` — Complete UI (sidebar nav, dark/light theme, 5 pages incl. firmware download)
+- `src/index.html` — Complete UI markup + JS (sidebar nav, 5 pages incl. firmware download)
+- `src/styles.css` — Theme + components (modem-cat midnight-blue design language, dark/light)
 - `src-tauri/src/lib.rs` — Tauri commands + AppState (6 Mutex fields)
 - `src-tauri/src/dloader.rs` — Firmware download: safety policy (`plan_flash`), sidecar bridge, `DloaderState`
 - `src-tauri/src/api_client.rs` — REST HTTP client (reqwest, 5s timeout)
