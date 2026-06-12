@@ -14,19 +14,23 @@ Cross-platform 5G factory SN management tool built with Tauri 2 + Rust. Refactor
 |-------|---------------|-------|
 | UI | Page rendering, user interaction, theme | `src/index.html` |
 | IPC | Frontend ↔ Backend | Tauri `invoke()` |
-| Commands | Route dispatch, state management | `lib.rs` (13 `#[tauri::command]` functions) |
-| Business | SN generation, License, device comm | `sn_generator.rs`, `license.rs`, `api_client.rs` |
+| Commands | Route dispatch, state management | `lib.rs`, `dloader.rs` (24 `#[tauri::command]` functions) |
+| Business | SN generation, License, device comm, firmware flash | `sn_generator.rs`, `license.rs`, `api_client.rs`, `dloader.rs` |
 | Data | JSON file read/write | `data.rs` |
 | Types | Shared serde structs | `types.rs` |
 
 ## Key Files
-- `src/index.html` — Complete UI (sidebar nav, dark/light theme, 4 pages)
-- `src-tauri/src/lib.rs` — Tauri commands + AppState (7 Mutex fields)
-- `src-tauri/src/api_client.rs` — REST HTTP client (reqwest)
+- `src/index.html` — Complete UI (sidebar nav, dark/light theme, 5 pages incl. firmware download)
+- `src-tauri/src/lib.rs` — Tauri commands + AppState (6 Mutex fields)
+- `src-tauri/src/dloader.rs` — Firmware download: safety policy (`plan_flash`), sidecar bridge, `DloaderState`
+- `src-tauri/src/api_client.rs` — REST HTTP client (reqwest, 5s timeout)
 - `src-tauri/src/sn_generator.rs` — SN generation logic
 - `src-tauri/src/license.rs` — JWT license validation
 - `src-tauri/src/data.rs` — JSON file persistence
 - `src-tauri/src/types.rs` — Shared Rust types (serde)
+- `src-tauri/capabilities/default.json` — Webview capability (`core:default`, enables `event.listen`)
+- `src-tauri/binaries/` — Vendored 32-bit `r26-cli` sidecar + `r26-cli.version.txt` stamp
+- `scripts/update-dloader-cli.ps1` — Rebuild + re-vendor the sidecar from the sibling r26-dloader repo
 
 ## Developer Commands
 ```bash
@@ -49,7 +53,7 @@ cd src-tauri && cargo build
 cd src-tauri && cargo build --release
 ```
 
-No test framework is configured. No linter is configured.
+Tests: `cd src-tauri && cargo test` (unit tests live in `dloader.rs` — safety policy + event contract). No linter is configured.
 
 ## Build Prerequisites
 - Rust toolchain (rustup)
@@ -79,10 +83,9 @@ Two separate JWT systems with different keys and algorithms:
 - Device activation: IMEI + level → JWT → POST to device → verify via `license_get`
 
 ## Data Storage
-Portable mode — all data relative to the executable directory:
-- **Config files** (exe directory): `basecfgdata.json`, `selectdata.json`, `lic.dat`
-- **Runtime data** (`Data/` subdirectory): `execute_sn_data.json`, `YYYY-MM-DD.csv` (device records, append-only)
-- Device records are appended as CSV rows (date-named file, one file per day)
+- **Config + runtime data** — Tauri `app_data_dir()` (e.g. `%APPDATA%\com.arixo.factorytool`), flat, no subdirectory: `basecfgdata.json`, `selectdata.json`, `execute_sn_data.json`, `YYYY-MM-DD.csv` (device records, append-only, one file per day)
+- **License file** (exe directory): `lic.dat`
+- JSON key `CurretSeqNo` in `execute_sn_data.json` is a frozen legacy misspelling (see `types.rs`) — do not "fix" it
 
 ## SN Format
 `Brand(1-2) + Type(2) + Factory(1) + Year(1) + Month(1 hex) + Sequence(5)` = ~12 chars
@@ -91,15 +94,16 @@ Year code = last digit of year (e.g. 2026 → "6")
 Month code = uppercase hex (e.g. December → "C")
 Sequence = 5-digit zero-padded, max 99999
 
-## AppState Fields
-All fields use `Mutex` for thread safety:
+## Managed State
+`AppState` — all fields use `Mutex` for thread safety (acquire in field order, never hold across `.await`):
 - `device_client: Mutex<Option<DeviceClient>>`
 - `data_manager: Mutex<Option<DataManager>>`
 - `current_product: Mutex<Product>`
 - `current_code_set: Mutex<CodeSet>`
-- `execute_data: Mutex<Option<ExecutDataList>>`
-- `execute_data: Mutex<Option<ExecutDataList>>`
-- `base_data: Mutex<Option<BaseData>>`
+- `execute_data: Mutex<Option<ExecuteDataList>>`
+- `base_data: Mutex<BaseData>`
+
+`DloaderState` (managed separately): `child: Arc<Mutex<Option<CommandChild>>>` — the running firmware sidecar; cleared on process exit, stop, or window close.
 
 ## Key Patterns
 - **DeviceClient clone**: Uses manual `Clone` impl that clones `reqwest::Client` and recreates `Mutex<String>` for IP — needed because `reqwest::Client` is already `Clone` but `Mutex<String>` is not `Clone`
@@ -109,10 +113,19 @@ All fields use `Mutex` for thread safety:
 - **withGlobalTauri**: `tauri.conf.json` has `"withGlobalTauri": true` — frontend uses `window.__TAURI__.invoke()` directly without ES module imports
 - **CSP disabled**: `"csp": null` in tauri.conf.json
 
-## Tauri Commands (13 total)
-`init_app`, `check_license`, `get_base_data`, `get_current_product`, `set_product`, `get_current_sn`, `get_code_set`, `set_device_ip`, `write_sn_to_device`, `get_device_info_from_device`, `activate_device`, `save_execute_data`, `save_device_record`, `increment_sequence`
+## Tauri Commands (24 total)
+- **Core** (`lib.rs`): `init_app`, `check_license`, `get_base_data`, `get_current_product`, `set_product`, `get_current_sn`, `get_code_set`, `set_device_ip`, `write_sn_to_device`, `get_device_info_from_device`, `activate_device`, `save_execute_data`, `save_device_record`, `increment_sequence`
+- **Base-data CRUD** (generated by the `crud_commands!` macro in `lib.rs`): `add_brand`, `remove_brand`, `add_product_type`, `remove_product_type`, `add_factory`, `remove_factory`
+- **Firmware** (`dloader.rs`): `pick_pac_file`, `pac_info`, `start_firmware_download`, `stop_firmware_download`
+
+## Firmware Download (r26-cli sidecar)
+- The 32-bit `r26-cli.exe` (Unisoc DLLs embedded) runs as a Tauri sidecar under the 64-bit app (WOW64). The binary is named with the **host** triple (`r26-cli-x86_64-pc-windows-msvc.exe`) because Tauri selects sidecars by host triple.
+- Sidecar and file dialog are driven from **Rust**, so no webview permission is needed beyond `core:default` (which provides `event.listen` for `firmware-event`).
+- Downloads always pass `--port 0` — the sidecar auto-detects the COM port.
+- Safety policy (`plan_flash`, unit-tested): erase/NV writes auto-allowed; **RF-calibration and PhaseCheck PACs are blocked before the sidecar is spawned**. Never pass `--allow-rf-calibration` / `--allow-phasecheck`.
+- Event contract: sidecar stdout JSON (`EngineEvent`) is deserialized into the local `FirmwareEvent` enum at the bridge — upstream field renames surface as a "契约漂移" warn log instead of silent UI corruption. `SIDECAR_EXPECTED_VERSION` in `dloader.rs` is checked against `r26-cli --version` once per process; `binaries/r26-cli.version.txt` records the source commit.
+- Sibling repo: `D:/code/r26-dloader` (no source dependency — only the compiled exe is vendored; refresh via `scripts/update-dloader-cli.ps1`).
 
 ## Notes
-- Disables cert validation for device API (`danger_accept_invalid_certs`)
-- UI style matches modem-cat project (dark theme, sidebar nav, CSS variables)
-- No test framework configured yet
+- Disables cert validation for device API (`danger_accept_invalid_certs`); 5s request timeout
+- UI style matches modem-cat project (dark theme, sidebar nav, CSS variables); the firmware page mirrors r26-dloader's DownloadPage via `#page-firmware`-scoped styles
