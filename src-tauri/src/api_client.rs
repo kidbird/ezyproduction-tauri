@@ -22,6 +22,9 @@ impl DeviceClient {
     pub fn new(ip: &str) -> Self {
         let client = Client::builder()
             .danger_accept_invalid_certs(true)
+            // Without a timeout an unreachable device blocks until the OS TCP
+            // timeout (~75s) — and get_device_info chains four requests.
+            .timeout(std::time::Duration::from_secs(5))
             .build()
             .unwrap_or_else(|_| Client::new());
 
@@ -32,9 +35,9 @@ impl DeviceClient {
     }
 
     pub fn update_ip(&self, ip: &str) {
-        if let Ok(mut current_ip) = self.ip.lock() {
-            *current_ip = ip.to_string();
-        }
+        // Recover from a poisoned lock like base_url() does — silently
+        // dropping the operator's IP change would be worse than proceeding.
+        *self.ip.lock().unwrap_or_else(|e| e.into_inner()) = ip.to_string();
     }
 
     fn base_url(&self) -> String {

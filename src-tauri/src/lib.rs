@@ -14,12 +14,17 @@ use license::{generate_device_jwt, read_license_file, validate_license};
 use sn_generator::{generate_sn, increment_seq, update_code_set};
 use types::*;
 
+// Lock-order convention: when a command needs several of these locks, acquire
+// them in field-declaration order (device_client → data_manager → product →
+// code_set → execute_data → base_data) and never hold one across an .await.
+// Today Tauri serializes webview IPC so a deadlock can't manifest, but the
+// ordering keeps future concurrent callers safe.
 pub struct AppState {
     pub device_client: Mutex<Option<DeviceClient>>,
     pub data_manager: Mutex<Option<DataManager>>,
     pub current_product: Mutex<Product>,
     pub current_code_set: Mutex<CodeSet>,
-    pub execute_data: Mutex<Option<ExecutDataList>>,
+    pub execute_data: Mutex<Option<ExecuteDataList>>,
     pub base_data: Mutex<BaseData>,
 }
 
@@ -95,7 +100,7 @@ fn init_app(app_handle: tauri::AppHandle) -> Result<bool, String> {
         );
         for ex in &ex_data.exe_data_list {
             if ex.prefix_str == prefix {
-                code_set.seq_code = increment_seq(&ex.curret_seq_no).unwrap_or("00001".to_string());
+                code_set.seq_code = increment_seq(&ex.current_seq_no).unwrap_or("00001".to_string());
                 break;
             }
         }
@@ -272,7 +277,7 @@ fn save_execute_data(state: State<'_, AppState>) -> Result<(), String> {
     );
 
     if execute_data.is_none() {
-        *execute_data = Some(ExecutDataList { exe_data_list: Vec::new() });
+        *execute_data = Some(ExecuteDataList { exe_data_list: Vec::new() });
     }
 
     if let Some(ref mut ex_data) = *execute_data {
@@ -280,7 +285,7 @@ fn save_execute_data(state: State<'_, AppState>) -> Result<(), String> {
         for ex in &mut ex_data.exe_data_list {
             if ex.prefix_str == prefix {
                 ex.date_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-                ex.curret_seq_no = code_set.seq_code.clone();
+                ex.current_seq_no = code_set.seq_code.clone();
                 ex.product_type = product.product_type.clone();
                 found = true;
                 break;
@@ -291,13 +296,13 @@ fn save_execute_data(state: State<'_, AppState>) -> Result<(), String> {
                 date_str: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 product_type: product.product_type.clone(),
                 prefix_str: prefix,
-                curret_seq_no: code_set.seq_code.clone(),
+                current_seq_no: code_set.seq_code.clone(),
             });
         }
     }
 
     if let Some(ref dm) = *state.data_manager.lock().unwrap() {
-        dm.save_execute_data(execute_data.as_ref().unwrap())?;
+        dm.save_execute_data(execute_data.as_ref().ok_or("execute data not initialized")?)?;
     }
 
     Ok(())
@@ -329,7 +334,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .on_window_event(|window, event| {
             // If the window closes mid-flash, kill the sidecar so it never
-            // keeps controlling the device after the UI is gone.
+            // keeps controlling the device after the UI is gone. Best-effort:
+            // a kill() failure is ignored — the OS reaps the child anyway.
             if matches!(
                 event,
                 tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed

@@ -3,7 +3,7 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::types::{BaseData, DeviceInfo, ExecutDataList, Product};
+use crate::types::{BaseData, DeviceInfo, ExecuteDataList, Product};
 
 pub struct DataManager {
     data_dir: PathBuf,
@@ -71,11 +71,11 @@ impl DataManager {
         self.write_json("selectdata.json", product)
     }
 
-    pub fn load_execute_data(&self) -> Result<ExecutDataList, String> {
+    pub fn load_execute_data(&self) -> Result<ExecuteDataList, String> {
         self.read_json("execute_sn_data.json")
     }
 
-    pub fn save_execute_data(&self, data: &ExecutDataList) -> Result<(), String> {
+    pub fn save_execute_data(&self, data: &ExecuteDataList) -> Result<(), String> {
         self.write_json("execute_sn_data.json", data)
     }
 

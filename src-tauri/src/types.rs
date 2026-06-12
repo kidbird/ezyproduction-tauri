@@ -50,12 +50,16 @@ pub struct ExecuteData {
     #[serde(rename = "Type")]
     pub product_type: String,
     pub prefix_str: String,
-    pub curret_seq_no: String,
+    // The misspelled "CurretSeqNo" is the on-disk JSON key inherited from the
+    // C# predecessor — frozen here explicitly. Changing it would silently
+    // orphan the sequence counters in every existing execute_sn_data.json.
+    #[serde(rename = "CurretSeqNo")]
+    pub current_seq_no: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub struct ExecutDataList {
+pub struct ExecuteDataList {
     pub exe_data_list: Vec<ExecuteData>,
 }
 
@@ -71,8 +75,6 @@ pub struct DeviceInfo {
     pub timestamp: String,
     pub activated: bool,
 }
-
-// CSV record exported for device production trace
 
 // ─── REST API Response ──────────────────────────────────────────────────────
 

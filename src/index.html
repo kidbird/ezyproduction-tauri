@@ -892,7 +892,7 @@
           <div class="panel-body">
             <p class="mb-8">5G 工厂序列号管理工具</p>
             <p class="text-sm text-muted">版本: 0.1.2 (Tauri)</p>
-            <p class="text-sm text-muted mt-8">基于 Tauri + TypeScript 构建，支持 Windows / macOS / Linux</p>
+            <p class="text-sm text-muted mt-8">基于 Tauri + Rust 构建，支持 Windows / macOS / Linux</p>
           </div>
         </div>
 
@@ -1074,7 +1074,8 @@
       [...report.nv_files, ...report.rf_cali_files, ...report.erase_files, ...report.phasecheck_files]
         .forEach(f => rows.push({ id: f.file_id, risk: f.risk_level, reason: f.reason }));
       const body = rows.map(r => {
-        const [label, cls] = RISK_LABEL[r.risk] || [r.risk, 'info'];
+        // 未知风险等级（契约漂移）显式标记为 warn，而不是静默降级为 info
+        const [label, cls] = RISK_LABEL[r.risk] || [fwEsc(r.risk) + ' ?', 'warn'];
         return `<tr><td class="id">${fwEsc(r.id)}</td><td><span class="chip ${cls}" title="${fwEsc(r.reason)}">${label}</span></td></tr>`;
       }).join('');
       document.getElementById('fwRiskWrap').innerHTML =
@@ -1313,10 +1314,11 @@
       }
       items.forEach(item => {
         const tr = document.createElement('tr');
+        // 名称/编码来自可编辑的配置文件，进 innerHTML 前必须转义
         tr.innerHTML = `
-          <td>${item.name}</td>
-          <td>${item.code}</td>
-          <td><button class="btn btn-primary" data-cmd="${removeCmd}" data-name="${item.name}">删除</button></td>
+          <td>${fwEsc(item.name)}</td>
+          <td>${fwEsc(item.code)}</td>
+          <td><button class="btn btn-primary" data-cmd="${removeCmd}" data-name="${fwEsc(item.name)}">删除</button></td>
         `;
         tbody.appendChild(tr);
       });
