@@ -16,11 +16,7 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-feature
 jsonwebtoken = "9"
 chrono = { version = "0.4", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
-log = "0.4"
-env_logger = "0.11"
 mac_address = "1.1"
-dirs = "5"
-thiserror = "1"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
