@@ -79,7 +79,6 @@
       <div class="page active" id="page-production">
         <h1 class="page-title">生产操作</h1>
 
-        <!-- Device Connection -->
         <div class="panel">
           <div class="panel-body">
             <div class="form-group" style="display:flex; align-items:center; gap:12px; margin-bottom:0;">
@@ -90,7 +89,6 @@
           </div>
         </div>
 
-        <!-- Product Selection -->
         <div class="panel">
           <div class="panel-title">产品选择</div>
           <div class="panel-body">
@@ -111,7 +109,6 @@
           </div>
         </div>
 
-        <!-- SN Display -->
         <div class="panel">
           <div class="panel-title">序列号</div>
           <div class="panel-body">
@@ -127,7 +124,6 @@
           </div>
         </div>
 
-        <!-- Device Info -->
         <div class="panel">
           <div class="panel-title">设备信息</div>
           <div class="panel-body">
@@ -251,7 +247,6 @@
       <div class="page" id="page-firmware">
         <h1 class="page-title">固件下载</h1>
 
-        <!-- PAC selection + analysis -->
         <div class="panel">
           <div class="panel-body">
             <div class="panel-header"><div class="panel-title">PAC 固件包</div></div>
@@ -264,7 +259,6 @@
           </div>
         </div>
 
-        <!-- Safety status -->
         <div class="panel">
           <div class="panel-body">
             <div class="panel-header"><div class="panel-title">安全策略状态</div></div>
@@ -274,7 +268,6 @@
           </div>
         </div>
 
-        <!-- Download controls -->
         <div class="panel">
           <div class="panel-body">
             <div class="panel-header"><div class="panel-title">下载控制</div></div>
@@ -293,7 +286,6 @@
           </div>
         </div>
 
-        <!-- Logs -->
         <div class="panel">
           <div class="panel-body">
             <div class="panel-header"><div class="panel-title">系统运行日志</div></div>
@@ -307,7 +299,7 @@
         <h1 class="page-title">关于</h1>
 
         <div class="panel">
-            <div class="panel-title">FactoryTool</div>
+          <div class="panel-title">FactoryTool</div>
           <div class="panel-body">
             <p class="mb-8">5G 工厂序列号管理工具</p>
             <p class="text-sm text-muted">版本: 0.1.2 (Tauri)</p>
@@ -338,602 +330,16 @@
     </main>
   </div>
 
-  <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
   </div>
 
-  <script>
-    // ─── State ─────────────────────────────────────────────────────────────
-    const state = {
-      connected: false,
-      deviceIp: '192.168.42.1',
-      baseData: null,
-      currentProduct: null,
-      currentSn: '',
-      deviceInfo: null,
-      records: [],
-    };
-
-    // ─── Tauri Invoke Helper ───────────────────────────────────────────────
-    const { invoke } = window.__TAURI__.core;
-
-    async function tauriInvoke(cmd, args = {}) {
-      try {
-        showLoading();
-        const result = await invoke(cmd, args);
-        return result;
-      } catch (error) {
-        showToast(error, 'error');
-        throw error;
-      } finally {
-        hideLoading();
-      }
-    }
-
-    // ─── UI Helpers ────────────────────────────────────────────────────────
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        toast.style.transition = 'all 0.2s ease';
-        setTimeout(() => toast.remove(), 200);
-      }, 3000);
-    }
-
-    function showLoading() {
-      document.getElementById('loadingOverlay').classList.add('active');
-    }
-
-    function hideLoading() {
-      document.getElementById('loadingOverlay').classList.remove('active');
-    }
-
-    function updateConnectionStatus(connected) {
-      state.connected = connected;
-      const dot = document.getElementById('statusDot');
-      const text = document.getElementById('statusText');
-      
-      if (connected) {
-        dot.classList.add('connected');
-        text.textContent = '已连接';
-      } else {
-        dot.classList.remove('connected');
-        text.textContent = '未连接';
-      }
-    }
-
-    function updateSnDisplay(sn) {
-      state.currentSn = sn;
-      document.getElementById('snDisplay').textContent = sn || '------------';
-    }
-
-    function updateDeviceInfo(info) {
-      state.deviceInfo = info;
-      document.getElementById('imeiValue').textContent = info.imei || '-';
-      document.getElementById('iccidValue').textContent = info.iccid || '-';
-      document.getElementById('deviceSnValue').textContent = info.sn || '-';
-      document.getElementById('swVersionValue').textContent = info.sw_version || '-';
-      document.getElementById('deviceNameValue').textContent = info.device_name || '-';
-      document.getElementById('activateStatusValue').textContent = info.activated ? '已激活' : '未激活';
-    }
-
-    // ─── Navigation ────────────────────────────────────────────────────────
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (item.classList.contains('disabled')) return;
-        
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-        
-        const page = item.dataset.page;
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(`page-${page}`).classList.add('active');
-      });
-    });
-
-    // ─── Theme Toggle ──────────────────────────────────────────────────────
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.addEventListener('click', () => {
-      const html = document.documentElement;
-      const current = html.getAttribute('data-theme');
-      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-    });
-
-    // ─── Firmware Download Page ────────────────────────────────────────────
-    const { listen } = window.__TAURI__.event;
-
-    const fw = {
-      pacPath: null,
-      report: null,
-      downloading: false,
-    };
-
-    const RISK_LABEL = {
-      Safe: ['安全','ok'], NvWrite: ['NV','warn'], RfCalibration: ['RF校准','err'],
-      Erase: ['擦除','err'], EraseAll: ['全盘擦除','err'], PhaseCheck: ['PhaseCheck','info'],
-    };
-    const fwEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-
-    function fwLog(line) {
-      const el = document.getElementById('fwLog');
-      if (el.dataset.empty !== 'false') { el.textContent = ''; el.dataset.empty = 'false'; }
-      el.textContent += (el.textContent ? '\n' : '') + line;
-      el.scrollTop = el.scrollHeight;
-    }
-
-    function fwRenderReport(report) {
-      const alertEl = document.getElementById('fwPacAlert');
-      alertEl.innerHTML = `<div class="alert alert-success">✓ PAC 加载完成（${report.total_files} 个文件）</div>`;
-
-      // Safety chips: reflect what this PAC will actually do.
-      const chips = document.getElementById('fwSafetyChips');
-      const eraseOn = report.erase_files.length > 0;
-      const nvOn = report.nv_files.length > 0;
-      const rfBlocked = report.touches_rf_calibration || report.rf_cali_files.length > 0;
-      const pcBlocked = report.phasecheck_files.length > 0;
-      chips.innerHTML =
-        `<span class="chip ${eraseOn ? 'warn' : 'ok'}">擦除: ${eraseOn ? '将执行' : '无'}</span>` +
-        `<span class="chip ${nvOn ? 'warn' : 'ok'}">NV写入: ${nvOn ? '将执行(保留校准)' : '无'}</span>` +
-        `<span class="chip ${rfBlocked ? 'err' : 'ok'}">射频校准: ${rfBlocked ? '含校准·已禁止' : '已保护'}</span>` +
-        (pcBlocked ? `<span class="chip err">PhaseCheck: 含数据·已禁止</span>` : '');
-
-      // Risk file table.
-      const rows = [];
-      report.safe_files.forEach(id => rows.push({ id, risk: 'Safe', reason: '' }));
-      [...report.nv_files, ...report.rf_cali_files, ...report.erase_files, ...report.phasecheck_files]
-        .forEach(f => rows.push({ id: f.file_id, risk: f.risk_level, reason: f.reason }));
-      const body = rows.map(r => {
-        // 未知风险等级（契约漂移）显式标记为 warn，而不是静默降级为 info
-        const [label, cls] = RISK_LABEL[r.risk] || [fwEsc(r.risk) + ' ?', 'warn'];
-        return `<tr><td class="id">${fwEsc(r.id)}</td><td><span class="chip ${cls}" title="${fwEsc(r.reason)}">${label}</span></td></tr>`;
-      }).join('');
-      document.getElementById('fwRiskWrap').innerHTML =
-        `<details><summary style="cursor:pointer; font-size:12.5px; color:var(--text-secondary);">文件列表 (${report.total_files})</summary>` +
-        `<table class="risk-table"><thead><tr><th>文件 ID</th><th>风险</th></tr></thead><tbody>${body}</tbody></table></details>`;
-
-      const blocked = rfBlocked || pcBlocked;
-      document.getElementById('fwStartBtn').disabled = blocked || fw.downloading;
-      if (blocked) {
-        alertEl.innerHTML += `<div class="alert alert-error" style="margin-top:8px;">此 PAC 含受保护分区（射频校准 / PhaseCheck），出于保护已禁止刷写。</div>`;
-      }
-    }
-
-    function fwSetDownloading(on) {
-      fw.downloading = on;
-      document.getElementById('fwStartBtn').disabled = on || !fw.report;
-      document.getElementById('fwStopBtn').disabled = !on;
-      document.getElementById('fwSelectPacBtn').disabled = on;
-      document.getElementById('fwStartBtn').textContent = on ? '下载中…' : '开始下载';
-    }
-
-    function fwSetResult(html) {
-      document.getElementById('fwResult').innerHTML = html;
-    }
-
-    function fwSetProgress(label, pct) {
-      const wrap = document.getElementById('fwProgressWrap');
-      if (pct == null) { wrap.style.display = 'none'; return; }
-      wrap.style.display = 'block';
-      document.getElementById('fwProgressLabel').textContent = label;
-      document.getElementById('fwProgressPct').textContent = `${Math.round(pct)}%`;
-      document.getElementById('fwProgressFill').style.width = `${Math.round(pct)}%`;
-    }
-
-    // Select + analyze a PAC.
-    document.getElementById('fwSelectPacBtn').addEventListener('click', async () => {
-      const selBtn = document.getElementById('fwSelectPacBtn');
-      let path;
-      try {
-        path = await invoke('pick_pac_file');
-      } catch (e) {
-        document.getElementById('fwPacAlert').innerHTML = `<div class="alert alert-error">分析失败: ${fwEsc(e)}</div>`;
-        return;
-      }
-      if (!path) return;
-      selBtn.disabled = true;
-      try {
-        fw.pacPath = path;
-        fw.report = null;
-        document.getElementById('fwPacPath').textContent = path;
-        document.getElementById('fwPacAlert').innerHTML = '<div class="alert alert-info">正在分析 PAC…</div>';
-        document.getElementById('fwRiskWrap').innerHTML = '';
-        document.getElementById('fwStartBtn').disabled = true;
-        const report = await invoke('pac_info', { path });
-        fw.report = report;
-        fwRenderReport(report);
-      } catch (e) {
-        document.getElementById('fwPacAlert').innerHTML = `<div class="alert alert-error">分析失败: ${fwEsc(e)}</div>`;
-      } finally {
-        selBtn.disabled = fw.downloading;
-      }
-    });
-
-    // Start download.
-    document.getElementById('fwStartBtn').addEventListener('click', async () => {
-      if (!fw.pacPath) { showToast('请先选择 PAC 文件', 'error'); return; }
-      try {
-        document.getElementById('fwLog').textContent = '';
-        document.getElementById('fwLog').dataset.empty = 'false';
-        fwSetResult('');
-        fwSetDownloading(true);
-        fwSetProgress('等待设备…', 0);
-        await invoke('start_firmware_download', { path: fw.pacPath });
-      } catch (e) {
-        fwSetDownloading(false);
-        fwSetProgress(null);
-        fwSetResult(`<div class="alert alert-error">${e}</div>`);
-      }
-    });
-
-    // Stop download.
-    document.getElementById('fwStopBtn').addEventListener('click', async () => {
-      try {
-        await invoke('stop_firmware_download');
-        fwSetDownloading(false);
-        fwSetProgress(null);
-        fwSetResult('<div class="alert alert-info">下载已手动停止</div>');
-      } catch (e) {
-        showToast(`停止失败: ${e}`, 'error');
-      }
-    });
-
-    // Listen to forwarded sidecar events.
-    listen('firmware-event', (ev) => {
-      const p = ev.payload || {};
-      if (p.Log) {
-        fwLog(`[${p.Log.level}] ${p.Log.message}`);
-      } else if (p.Progress) {
-        fwSetDownloading(true);
-        fwSetProgress(p.Progress.file_id, p.Progress.percent);
-      } else if (p.PacLoadProgress) {
-        fwSetProgress('加载 PAC…', p.PacLoadProgress.percent);
-      } else if (p.StateChange) {
-        fwLog(`[状态] ${p.StateChange.from} → ${p.StateChange.to}`);
-      } else if (p.Completed) {
-        const r = p.Completed.result;
-        fwSetDownloading(false);
-        fwSetProgress(null);
-        fwSetResult(r.success
-          ? `<div class="alert alert-success">✅ 下载完成！耗时 ${Math.round((r.duration_ms||0)/1000)} 秒</div>`
-          : `<div class="alert alert-error">❌ 下载失败: ${fwEsc(r.error || '未知错误')}</div>`);
-      } else if (p.Error) {
-        fwSetDownloading(false);
-        fwSetProgress(null);
-        fwSetResult(`<div class="alert alert-error">❌ 错误 [${p.Error.code}]: ${fwEsc(p.Error.message)}</div>`);
-      } else if (p.Terminated) {
-        // Process exited without a Completed event (e.g. killed or crashed).
-        if (fw.downloading) {
-          fwSetDownloading(false);
-          fwSetProgress(null);
-          if (p.Terminated.code && p.Terminated.code !== 0) {
-            fwSetResult(`<div class="alert alert-error">刷机进程异常退出 (code ${p.Terminated.code})</div>`);
-          }
-        }
-      }
-    });
-
-    // ─── Initialization ────────────────────────────────────────────────────
-    async function initApp() {
-      try {
-        await invoke('init_app');
-        
-        let baseData;
-        try {
-          baseData = await invoke('get_base_data');
-        } catch (e) {
-          console.error('get_base_data failed:', e);
-          showToast('加载配置失败: ' + e, 'error');
-          return;
-        }
-        
-        if (!baseData || !baseData.brands) {
-          showToast('配置数据格式错误', 'error');
-          return;
-        }
-        
-        state.baseData = baseData;
-        populateSelects(baseData);
-        renderConfigTables(baseData);
-        
-        let product;
-        try {
-          product = await invoke('get_current_product');
-        } catch (e) {
-          console.error('get_current_product failed:', e);
-          product = { brand: '', product_type: '', fac: '' };
-        }
-        state.currentProduct = product;
-        
-        const brandSelect = document.getElementById('brandSelect');
-        const typeSelect = document.getElementById('typeSelect');
-        const factorySelect = document.getElementById('factorySelect');
-        if (product.Brand ?? product.brand) brandSelect.value = product.Brand ?? product.brand;
-        if (product.Type ?? product.product_type) typeSelect.value = product.Type ?? product.product_type;
-        if (product.Fac ?? product.fac) factorySelect.value = product.Fac ?? product.fac;
-        
-        let sn;
-        try {
-          sn = await invoke('get_current_sn');
-        } catch (e) {
-          sn = '------------';
-        }
-        updateSnDisplay(sn);
-        
-        showToast('应用初始化成功', 'success');
-      } catch (error) {
-        console.error('Init failed:', error);
-        showToast('初始化失败: ' + error, 'error');
-      }
-    }
-
-    function populateSelects(baseData) {
-      const brandSelect = document.getElementById('brandSelect');
-      const typeSelect = document.getElementById('typeSelect');
-      const factorySelect = document.getElementById('factorySelect');
-      
-      // Save current selections
-      const curBrand = brandSelect.value;
-      const curType = typeSelect.value;
-      const curFac = factorySelect.value;
-      
-      brandSelect.innerHTML = '';
-      typeSelect.innerHTML = '';
-      factorySelect.innerHTML = '';
-      
-      (baseData.brands || []).forEach(b => {
-        const opt = document.createElement('option');
-        opt.value = b.name;
-        opt.textContent = b.name;
-        brandSelect.appendChild(opt);
-      });
-      
-      (baseData.types || []).forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.name;
-        opt.textContent = t.name;
-        typeSelect.appendChild(opt);
-      });
-      
-      (baseData.factories || []).forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f.name;
-        opt.textContent = f.name;
-        factorySelect.appendChild(opt);
-      });
-      
-      // Restore selections
-      if (curBrand && baseData.brands?.some(b => b.name === curBrand)) brandSelect.value = curBrand;
-      if (curType && baseData.types?.some(t => t.name === curType)) typeSelect.value = curType;
-      if (curFac && baseData.factories?.some(f => f.name === curFac)) factorySelect.value = curFac;
-    }
-
-    // ─── Product Config Tables ─────────────────────────────────────────────
-    function renderConfigTables(baseData) {
-      renderConfigTable('brandsTableBody', baseData.brands || [], 'remove_brand');
-      renderConfigTable('typesTableBody', baseData.types || [], 'remove_product_type');
-      renderConfigTable('factoriesTableBody', baseData.factories || [], 'remove_factory');
-    }
-
-    function renderConfigTable(tbodyId, items, removeCmd) {
-      const tbody = document.getElementById(tbodyId);
-      tbody.innerHTML = '';
-      if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">暂无数据</td></tr>';
-        return;
-      }
-      items.forEach(item => {
-        const tr = document.createElement('tr');
-        // 名称/编码来自可编辑的配置文件，进 innerHTML 前必须转义
-        tr.innerHTML = `
-          <td>${fwEsc(item.name)}</td>
-          <td>${fwEsc(item.code)}</td>
-          <td><button class="btn btn-primary" data-cmd="${removeCmd}" data-name="${fwEsc(item.name)}">删除</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-      // Bind delete buttons
-      tbody.querySelectorAll('[data-cmd]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const cmd = btn.dataset.cmd;
-          const name = btn.dataset.name;
-          try {
-            showLoading();
-            const newBaseData = await invoke(cmd, { name });
-            state.baseData = newBaseData;
-            populateSelects(newBaseData);
-            renderConfigTables(newBaseData);
-            showToast('删除成功', 'success');
-          } catch (e) {
-            showToast('删除失败: ' + e, 'error');
-          } finally {
-            hideLoading();
-          }
-        });
-      });
-    }
-
-    async function addConfigItem(addCmd, nameId, codeId) {
-      const nameEl = document.getElementById(nameId);
-      const codeEl = document.getElementById(codeId);
-      const name = nameEl.value.trim();
-      const code = codeEl.value.trim();
-      if (!name || !code) {
-        showToast('名称和编码不能为空', 'error');
-        return;
-      }
-      try {
-        showLoading();
-        const newBaseData = await invoke(addCmd, { name, code });
-        state.baseData = newBaseData;
-        populateSelects(newBaseData);
-        renderConfigTables(newBaseData);
-        nameEl.value = '';
-        codeEl.value = '';
-        showToast('添加成功', 'success');
-      } catch (e) {
-        showToast('添加失败: ' + e, 'error');
-      } finally {
-        hideLoading();
-      }
-    }
-
-    document.getElementById('addBrandBtn').addEventListener('click', () => addConfigItem('add_brand', 'newBrandName', 'newBrandCode'));
-    document.getElementById('addTypeBtn').addEventListener('click', () => addConfigItem('add_product_type', 'newTypeName', 'newTypeCode'));
-    document.getElementById('addFactoryBtn').addEventListener('click', () => addConfigItem('add_factory', 'newFactoryName', 'newFactoryCode'));
-
-    // Tab switching
-    document.querySelectorAll('.config-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.config-tab-panel').forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-      });
-    });
-
-    // ─── Event Handlers ────────────────────────────────────────────────────
-    
-    // Product selection change
-    async function onProductChange() {
-      const brand = document.getElementById('brandSelect').value;
-      const productType = document.getElementById('typeSelect').value;
-      const fac = document.getElementById('factorySelect').value;
-      
-      try {
-        const sn = await tauriInvoke('set_product', {
-          brand,
-          productType,
-          fac,
-        });
-        updateSnDisplay(sn);
-      } catch (error) {
-        console.error('Failed to update product:', error);
-      }
-    }
-
-    document.getElementById('brandSelect').addEventListener('change', onProductChange);
-    document.getElementById('typeSelect').addEventListener('change', onProductChange);
-    document.getElementById('factorySelect').addEventListener('change', onProductChange);
-
-    // Connect
-    async function doConnect() {
-      const ip = document.getElementById('deviceIpInput').value.trim();
-      if (!ip) {
-        showToast('请输入设备 IP 地址', 'error');
-        return;
-      }
-      
-      state.deviceIp = ip;
-      await tauriInvoke('set_device_ip', { ip });
-      updateConnectionStatus(true);
-      showToast(`已连接到 ${ip}`, 'success');
-
-      try {
-        const info = await tauriInvoke('get_device_info_from_device');
-        updateDeviceInfo(info);
-      } catch (_) {}
-    }
-
-    document.getElementById('connectBtn').addEventListener('click', doConnect);
-    document.getElementById('deviceIpInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doConnect();
-    });
-
-    // Write SN
-    document.getElementById('writeSnBtn').addEventListener('click', async () => {
-      if (!state.connected) {
-        showToast('请先连接设备', 'error');
-        return;
-      }
-      
-      if (!state.currentSn) {
-        showToast('序列号为空', 'error');
-        return;
-      }
-      
-      try {
-        const statusEl = document.getElementById('writeStatus');
-        statusEl.innerHTML = '<span class="status-indicator info">写入中...</span>';
-        
-        // Write SN
-        const snOk = await tauriInvoke('write_sn_to_device', { sn: state.currentSn });
-        
-        if (!snOk) {
-          statusEl.innerHTML = '<span class="status-indicator error">SN 写入失败</span>';
-          showToast('SN 写入失败', 'error');
-          return;
-        }
-        
-        // Get device info
-        const info = await tauriInvoke('get_device_info_from_device');
-        updateDeviceInfo(info);
-        
-        // Save execute data
-        await tauriInvoke('save_execute_data');
-        
-        // Save device record
-        await tauriInvoke('save_device_record', { deviceInfo: info });
-        
-        // Increment sequence
-        const newSn = await tauriInvoke('increment_sequence');
-        updateSnDisplay(newSn);
-        
-        statusEl.innerHTML = '<span class="status-indicator success">写入成功</span>';
-        showToast('SN 写入成功', 'success');
-      } catch (error) {
-        document.getElementById('writeStatus').innerHTML = 
-          '<span class="status-indicator error">写入失败</span>';
-        showToast('写入失败: ' + error, 'error');
-      }
-    });
-
-    // Get device info
-    document.getElementById('getDeviceInfoBtn').addEventListener('click', async () => {
-      if (!state.connected) {
-        showToast('请先连接设备', 'error');
-        return;
-      }
-      
-      try {
-        const info = await tauriInvoke('get_device_info_from_device');
-        updateDeviceInfo(info);
-        showToast('设备信息获取成功', 'success');
-      } catch (error) {
-        showToast('获取失败: ' + error, 'error');
-      }
-    });
-
-    // Activate device
-    document.getElementById('activateBtn').addEventListener('click', async () => {
-      if (!state.connected) {
-        showToast('请先连接设备', 'error');
-        return;
-      }
-      
-      try {
-        const ok = await tauriInvoke('activate_device');
-        if (ok) {
-          showToast('设备激活成功', 'success');
-        } else {
-          showToast('设备激活失败', 'error');
-        }
-      } catch (error) {
-        showToast('激活失败: ' + error, 'error');
-      }
-    });
-
-    // ─── Start ─────────────────────────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', initApp);
-  </script>
+  <!-- Scripts: order matters. core.js defines state + helpers; firmware.js
+       owns the firmware page + sidecar events; app.js drives init + handlers. -->
+  <script src="js/core.js"></script>
+  <script src="js/firmware.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
